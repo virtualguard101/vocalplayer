@@ -1,0 +1,67 @@
+---
+description: VocalPlayer iteration standards (first-cycle learnings)
+alwaysApply: true
+---
+
+# VocalPlayer General Rules
+
+## 1) Requirements and Planning
+
+- Confirm interaction constraints and boundaries first (for example keybindings,
+  Enter confirmation behavior, and mouse behavior).
+- If a task has multiple valid approaches or high rework risk, switch to Plan
+  mode before implementation.
+- For UI interaction work, define an intent layer (`UiIntent`) before wiring
+  rendering and control logic to avoid tight coupling.
+
+## 2) Implementation Order (Recommended)
+
+- Update interfaces and state models first (headers/data contracts), then
+  implementation details.
+- Build control-layer state machine (`AppController`) before TUI event binding
+  (`TuiRenderer`).
+- For interaction upgrades, iterate in layers:
+  keyboard -> mouse -> viewport tracking -> status hints.
+
+## 3) C++ Coding Standards
+
+- Follow Google C++ Style and the repository `.clang-format`.
+- New/modified functions must include standard comments:
+  `@brief` + `@param` + `@return`; add `@note` for core behavior when needed.
+- Put public interface comments in `*.hpp`; keep `*.cpp` comments focused on
+  critical implementation details to avoid noise.
+
+## 4) Verification and Regression (Required After Changes)
+
+- Format: `clang-format -i <changed-files>`
+- Build:
+  `cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build -j`
+- Test: `ctest --test-dir build --output-on-failure`
+- If TUI interaction changed, run at least one smoke test with directory input.
+
+## 5) Documentation Sync
+
+- Behavior changes must update both READMEs:
+  `README.md` and `README_zh-CN.md`.
+- Architecture changes must update both architecture docs:
+  `docs/dev/architecture*.md`.
+- Record milestones in `changelog.md` under
+  Added/Changed/Fixed/Docs/DevEx.
+
+## 6) LSP and Build Environment
+
+- Always keep `compile_commands.json` available (exported by CMake and symlinked
+  to project root).
+- After `clean`, always re-run configure, otherwise clangd may report cascading
+  false errors.
+- Local development artifacts (for example `compile_commands.json`, `.cursor/`)
+  must not be committed.
+
+## 7) Quality Baseline
+
+- Do not skip tests for “looks good”; work is not complete without passing
+  verification.
+- Do not expand scope before validation; keep each iteration small and
+  reversible.
+- User-reported usability issues (mis-clicks, missing viewport follow, unclear
+  status hints) are higher priority than visual polish.

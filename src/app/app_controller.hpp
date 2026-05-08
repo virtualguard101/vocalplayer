@@ -18,9 +18,6 @@ class AppController {
   int Run(const std::string& input_path);
 
  private:
-  bool PlaySingleTrack(const std::string& track_path, int current_index,
-                       int total_tracks);
-
   Decoder decoder_;
   MetadataReader metadata_reader_;
   AudioEngine audio_engine_;

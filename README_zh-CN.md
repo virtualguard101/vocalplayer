@@ -9,6 +9,7 @@ VocalPlayer 是一个使用 C++ 构建的创意型 CLI 音乐播放器 MVP，重
 - 目录扫描 + 简单的按名称排序播放列表。
 - TUI 实时频谱柱与波形渲染。
 - 曲目信息展示（`title`、`artist`、时长；TagLib 可选）。
+- 支持 Vim 风格播放列表交互（`h/l/j/k`）与回车确认切歌。
 
 ## 依赖
 
@@ -38,6 +39,22 @@ cmake --build build -j
 
 在 TUI 中按 `q` 可退出当前会话。
 
+### TUI 快捷键
+
+- `h`：上一首
+- `l`：下一首
+- `Space`：暂停/恢复当前曲目
+- `j`：播放列表选中下移
+- `k`：播放列表选中上移
+- `Enter`：播放当前选中曲目
+- 鼠标左键点击列表项：选中并播放该曲目
+- `q`：退出
+
+### 键位配置接口（预留）
+
+`src/ui/keybindings.hpp` 中定义了 `Keybindings` 结构和
+`DefaultKeybindings()`。后续可在该接口基础上接入用户自定义配置文件。
+
 ## 代码格式（Google C++ Style）
 
 本仓库遵循 Google C++ Style。仓库根目录已提供 `.clang-format` 配置。
@@ -57,4 +74,4 @@ ctest --test-dir build --output-on-failure
 当前 MVP 有意不包含：
 
 - 情感分类
-- 快进/切歌交互
+- 完整的键位配置文件加载

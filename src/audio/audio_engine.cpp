@@ -53,6 +53,36 @@ void AudioEngine::Start() {
   is_playing_.store(true);
 }
 
+void AudioEngine::Pause() {
+  if (!has_device_ || !is_playing_.load()) {
+    return;
+  }
+  ma_result result = ma_device_stop(&device_);
+  if (result != MA_SUCCESS) {
+    throw std::runtime_error(BuildMiniaudioError("ma_device_stop", result));
+  }
+  is_playing_.store(false);
+}
+
+void AudioEngine::Resume() {
+  if (!has_device_ || is_playing_.load() || is_finished_.load()) {
+    return;
+  }
+  ma_result result = ma_device_start(&device_);
+  if (result != MA_SUCCESS) {
+    throw std::runtime_error(BuildMiniaudioError("ma_device_start", result));
+  }
+  is_playing_.store(true);
+}
+
+void AudioEngine::TogglePause() {
+  if (is_playing_.load()) {
+    Pause();
+  } else {
+    Resume();
+  }
+}
+
 void AudioEngine::Stop() {
   if (!has_device_) {
     return;

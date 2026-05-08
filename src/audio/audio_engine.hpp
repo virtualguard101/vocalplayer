@@ -20,6 +20,9 @@ class AudioEngine {
 
   void Load(DecodedTrack decoded_track, const TrackInfo& track_info);
   void Start();
+  void Pause();
+  void Resume();
+  void TogglePause();
   void Stop();
 
   [[nodiscard]] PlaybackState GetPlaybackState() const;

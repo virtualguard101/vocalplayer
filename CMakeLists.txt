@@ -97,4 +97,8 @@ if(VOCALPLAYER_BUILD_TESTS)
   add_executable(test_playlist tests/test_playlist.cpp src/app/playlist.cpp)
   target_include_directories(test_playlist PRIVATE ${PROJECT_SOURCE_DIR}/src)
   add_test(NAME playlist_test COMMAND test_playlist)
+
+  add_executable(test_keybindings tests/test_keybindings.cpp)
+  target_include_directories(test_keybindings PRIVATE ${PROJECT_SOURCE_DIR}/src)
+  add_test(NAME keybindings_test COMMAND test_keybindings)
 endif()

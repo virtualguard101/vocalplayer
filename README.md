@@ -9,6 +9,7 @@ real-time rhythm visualization in the terminal.
 - Directory scan + simple sorted playlist playback.
 - Real-time spectrum bars and waveform rendering in TUI mode.
 - Track metadata display (`title`, `artist`, and duration; TagLib optional).
+- Playlist interaction with Vim-style keybindings (`h/l/j/k`) and Enter confirm.
 
 ## Dependencies
 
@@ -38,6 +39,23 @@ cmake --build build -j
 
 Press `q` in the TUI to quit the current session.
 
+### TUI Keybindings
+
+- `h`: previous track
+- `l`: next track
+- `Space`: pause/resume current track
+- `j`: move playlist selection down
+- `k`: move playlist selection up
+- `Enter`: play selected track
+- Mouse left click on playlist item: select and play track
+- `q`: quit
+
+### Keybinding Configuration (Reserved Interface)
+
+`src/ui/keybindings.hpp` defines a `Keybindings` struct and
+`DefaultKeybindings()`. This is the stable extension point for future
+user-defined keybinding config files.
+
 ## Formatting (Google C++ Style)
 
 This repository follows Google C++ Style. A `.clang-format` configuration is
@@ -58,4 +76,4 @@ ctest --test-dir build --output-on-failure
 The current MVP intentionally excludes:
 
 - Emotion classification
-- Seek/skip interaction
+- Full keybinding config file loading

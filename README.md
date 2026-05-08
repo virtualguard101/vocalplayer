@@ -46,8 +46,9 @@ Press `q` in the TUI to quit the current session.
 - `Space`: pause/resume current track
 - `j`: move playlist selection down
 - `k`: move playlist selection up
+- Mouse wheel: scroll playlist viewport
+- Mouse left click on playlist item: select track
 - `Enter`: play selected track
-- Mouse left click on playlist item: select and play track
 - `q`: quit
 
 ### Keybinding Configuration (Reserved Interface)

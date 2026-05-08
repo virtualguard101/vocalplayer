@@ -49,6 +49,7 @@ endif()
 add_library(
     vocalplayer_core
     src/app/app_controller.cpp
+    src/app/playlist.cpp
     src/audio/audio_engine.cpp
     src/audio/decoder.cpp
     src/audio/metadata.cpp
@@ -92,4 +93,8 @@ if(VOCALPLAYER_BUILD_TESTS)
           ${kissfft_SOURCE_DIR})
   target_link_libraries(test_spectrum_analyzer PRIVATE kissfft_lib)
   add_test(NAME spectrum_analyzer_test COMMAND test_spectrum_analyzer)
+
+  add_executable(test_playlist tests/test_playlist.cpp src/app/playlist.cpp)
+  target_include_directories(test_playlist PRIVATE ${PROJECT_SOURCE_DIR}/src)
+  add_test(NAME playlist_test COMMAND test_playlist)
 endif()

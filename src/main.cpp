@@ -5,11 +5,11 @@
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    std::cerr << "Usage: vocalplayer <audio-file>" << std::endl;
+    std::cerr << "Usage: vocalplayer <audio-file-or-directory>" << std::endl;
     return 1;
   }
 
-  const std::string audio_file_path = argv[1];
+  const std::string input_path = argv[1];
   vocalplayer::AppController app;
-  return app.Run(audio_file_path);
+  return app.Run(input_path);
 }

@@ -6,6 +6,7 @@ real-time rhythm visualization in the terminal.
 ## MVP Features
 
 - Local audio playback (`wav` and any format supported by miniaudio decoder).
+- Directory scan + simple sorted playlist playback.
 - Real-time spectrum bars and waveform rendering in TUI mode.
 - Track metadata display (`title`, `artist`, and duration; TagLib optional).
 
@@ -32,9 +33,10 @@ cmake --build build -j
 
 ```bash
 ./build/vocalplayer /path/to/song.wav
+./build/vocalplayer /path/to/music-directory
 ```
 
-Press `q` in the TUI to quit.
+Press `q` in the TUI to quit the current session.
 
 ## Formatting (Google C++ Style)
 
@@ -56,5 +58,4 @@ ctest --test-dir build --output-on-failure
 The current MVP intentionally excludes:
 
 - Emotion classification
-- Playlist management
 - Seek/skip interaction

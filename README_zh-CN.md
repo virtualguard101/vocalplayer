@@ -26,7 +26,7 @@ CMake 会自动拉取以下第三方库：
 ## 构建
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build -j
 ```
 
@@ -69,6 +69,31 @@ rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i
 ```bash
 ctest --test-dir build --output-on-failure
 ```
+
+## LSP / clangd 环境配置（避免假报错）
+
+如果你在 C++ 文件里看到大量类似“header not found”的错误，通常是
+clangd 没拿到编译数据库（`compile_commands.json`）。
+
+### 首次配置
+
+```bash
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ln -sf build/compile_commands.json compile_commands.json
+```
+
+随后重载 IDE 窗口（或重启 Cursor），让 clangd 重新索引。
+
+### 执行 `clean`（`rm -rf build`）之后
+
+可以删除 `build`，但要立刻重新配置：
+
+```bash
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ln -sf build/compile_commands.json compile_commands.json
+```
+
+否则 clangd 可能出现级联假报错。
 
 ## 当前范围
 

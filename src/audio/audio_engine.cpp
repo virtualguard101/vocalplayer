@@ -8,16 +8,20 @@
 namespace vocalplayer {
 namespace {
 
+// Build a readable error message from miniaudio status code.
 std::string BuildMiniaudioError(const std::string& action, ma_result result) {
   return action + " failed: " + std::to_string(result);
 }
 
 }  // namespace
 
+// Initialize device storage to a known zero state.
 AudioEngine::AudioEngine() { std::memset(&device_, 0, sizeof(device_)); }
 
+// Ensure device resources are released.
 AudioEngine::~AudioEngine() { Stop(); }
 
+// Load decoded PCM data and initialize a playback device for the stream format.
 void AudioEngine::Load(DecodedTrack decoded_track,
                        const TrackInfo& track_info) {
   Stop();
@@ -42,6 +46,7 @@ void AudioEngine::Load(DecodedTrack decoded_track,
   has_device_ = true;
 }
 
+// Start playback from current frame cursor.
 void AudioEngine::Start() {
   if (!has_device_) {
     throw std::runtime_error("Audio device is not initialized.");
@@ -53,6 +58,7 @@ void AudioEngine::Start() {
   is_playing_.store(true);
 }
 
+// Pause playback while preserving cursor position.
 void AudioEngine::Pause() {
   if (!has_device_ || !is_playing_.load()) {
     return;
@@ -64,6 +70,7 @@ void AudioEngine::Pause() {
   is_playing_.store(false);
 }
 
+// Resume playback after pause.
 void AudioEngine::Resume() {
   if (!has_device_ || is_playing_.load() || is_finished_.load()) {
     return;
@@ -75,6 +82,7 @@ void AudioEngine::Resume() {
   is_playing_.store(true);
 }
 
+// Toggle paused/playing state.
 void AudioEngine::TogglePause() {
   if (is_playing_.load()) {
     Pause();
@@ -83,6 +91,7 @@ void AudioEngine::TogglePause() {
   }
 }
 
+// Stop playback and free device resources.
 void AudioEngine::Stop() {
   if (!has_device_) {
     return;
@@ -93,6 +102,7 @@ void AudioEngine::Stop() {
   is_playing_.store(false);
 }
 
+// Build current playback status for UI and control logic.
 PlaybackState AudioEngine::GetPlaybackState() const {
   PlaybackState state;
   state.duration_sec = track_info_.duration_sec;
@@ -103,6 +113,7 @@ PlaybackState AudioEngine::GetPlaybackState() const {
   return state;
 }
 
+// Extract a recent mono window for spectrum and waveform analysis.
 std::vector<float> AudioEngine::GetRecentMonoWindow(
     uint32_t window_size) const {
   std::vector<float> mono_window(window_size, 0.0f);
@@ -133,12 +144,14 @@ std::vector<float> AudioEngine::GetRecentMonoWindow(
   return mono_window;
 }
 
+// Static callback bridge for miniaudio device thread.
 void AudioEngine::DataCallback(ma_device* device, void* output,
                                const void* /*input*/, ma_uint32 frame_count) {
   auto* engine = static_cast<AudioEngine*>(device->pUserData);
   engine->RenderFrames(static_cast<float*>(output), frame_count);
 }
 
+// Fill output buffer with decoded PCM data and trailing silence if needed.
 void AudioEngine::RenderFrames(float* output, ma_uint32 frame_count) {
   uint64_t start_frame = current_frame_.load();
   uint64_t total_frames = decoded_track_.frame_count;

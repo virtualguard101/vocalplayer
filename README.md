@@ -26,7 +26,7 @@ Third-party libraries are fetched automatically by CMake:
 ## Build
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build -j
 ```
 
@@ -71,6 +71,31 @@ rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i
 ```bash
 ctest --test-dir build --output-on-failure
 ```
+
+## LSP / clangd Setup (Avoid False Errors)
+
+If you see many fake diagnostics like "header not found" in C++ files, clangd
+is usually missing compile commands.
+
+### First-time setup
+
+```bash
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ln -sf build/compile_commands.json compile_commands.json
+```
+
+Then reload the IDE window (or restart Cursor) to let clangd re-index.
+
+### After `clean` (`rm -rf build`)
+
+You can delete `build`, but run configure again immediately:
+
+```bash
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ln -sf build/compile_commands.json compile_commands.json
+```
+
+Without this step, clangd may report cascading false errors.
 
 ## Current Scope
 

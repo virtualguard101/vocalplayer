@@ -9,6 +9,7 @@
 
 namespace vocalplayer {
 
+// Compose UI metadata using path-based fallback plus optional TagLib tags.
 TrackInfo MetadataReader::ReadTrackInfo(const std::string& file_path,
                                         uint32_t sample_rate_hz,
                                         uint32_t channels,

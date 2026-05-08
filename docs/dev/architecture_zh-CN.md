@@ -11,6 +11,7 @@
 - 播放：通过 miniaudio 执行本地解码缓冲播放。
 - 可视化：通过 FTXUI 实现实时频谱柱与波形渲染。
 - 元数据：优先通过 TagLib 读取标题与艺术家（可选），并提供回退策略。
+- 交互：支持 `h/l`、`j/k`、`Space`、`Enter` 及鼠标选择/滚轮滚动。
 
 ## 组件图
 
@@ -120,6 +121,85 @@ flowchart TB
   spectrumAnalyzer --> dataTypes
   tuiRenderer --> dataTypes
 ```
+
+## 组件职责说明
+
+- `main.cpp`
+  - 解析命令行参数，并将控制权交给 `AppController::Run()`。
+- `AppController`
+  - 维护会话状态机。
+  - 协调解码、播放、分析与 UI 意图处理。
+- `BuildPlaylist()`
+  - 将输入路径解析为可播放音频列表并排序。
+- `Decoder`
+  - 输出 `DecodedTrack`（交错 float PCM）。
+  - 支持已知长度和分块回退解码。
+- `MetadataReader`
+  - 基于路径与可选 TagLib 元数据构建 `TrackInfo`。
+- `AudioEngine`
+  - 驱动音频输出设备并维护播放游标/状态。
+  - 提供暂停恢复与分析窗口提取能力。
+- `SpectrumAnalyzer`
+  - 将单声道窗口转换为频谱柱与波形点。
+- `TuiRenderer`
+  - 渲染终端界面。
+  - 将键鼠输入转换为 `UiIntent`。
+
+## 接口清单
+
+- 应用层接口
+  - `int AppController::Run(const std::string& input_path)`
+  - `std::vector<std::string> BuildPlaylist(const std::string& input_path)`
+- 音频层接口
+  - `DecodedTrack Decoder::DecodeFile(const std::string& path) const`
+  - `TrackInfo MetadataReader::ReadTrackInfo(...) const`
+  - `AudioEngine::{Load, Start, Pause, Resume, TogglePause, Stop}`
+  - `PlaybackState AudioEngine::GetPlaybackState() const`
+  - `std::vector<float> AudioEngine::GetRecentMonoWindow(uint32_t) const`
+- 分析层接口
+  - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
+  - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
+- 表现层接口
+  - `void TuiRenderer::Run(...)`
+  - `UiIntent`（播放与导航意图枚举）
+  - `Keybindings` + `DefaultKeybindings()`（键位映射入口）
+
+## 数据流图
+
+```mermaid
+flowchart LR
+  fileInput[文件或目录输入] --> playlistBuilder[BuildPlaylist]
+  playlistBuilder --> trackPath[TrackPath]
+  trackPath --> decoder[Decoder]
+  decoder --> decodedTrack[DecodedTrack_PCM]
+  trackPath --> metadataReader[MetadataReader]
+  metadataReader --> trackInfo[TrackInfo]
+  decodedTrack --> audioEngine[AudioEngine]
+  trackInfo --> audioEngine
+  audioEngine --> monoWindow[MonoWindow]
+  monoWindow --> spectrumAnalyzer[SpectrumAnalyzer]
+  spectrumAnalyzer --> spectrumBars[SpectrumBars]
+  spectrumAnalyzer --> waveformPoints[WaveformPoints]
+  audioEngine --> playbackState[PlaybackState]
+  trackInfo --> visualFrame[VisualFrame]
+  playbackState --> visualFrame
+  spectrumBars --> visualFrame
+  waveformPoints --> visualFrame
+  visualFrame --> tuiRenderer[TuiRenderer]
+  userInput[键盘与鼠标输入] --> tuiRenderer
+  tuiRenderer --> uiIntent[UiIntent]
+  uiIntent --> appController[AppControllerStateMachine]
+  appController --> audioEngine
+```
+
+## 运行时数据流说明
+
+- 渲染链路保持单向：
+  `AudioEngine -> SpectrumAnalyzer -> VisualFrame -> TuiRenderer`。
+- 控制链路反向回传：
+  `用户输入 -> TuiRenderer -> UiIntent -> AppController`。
+- `VisualFrame` 作为每帧不可变快照，降低模块耦合，利于后续 Rust 迁移。
+- `AudioEngine` 是播放状态单一事实来源（播放中、暂停、结束）。
 
 ## 数据契约
 

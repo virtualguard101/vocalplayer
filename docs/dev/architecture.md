@@ -2,16 +2,16 @@
 
 ## Scope
 
-This document records the current architecture of VocalPlayer MVP and serves as
-the baseline for future iterations (theme system, lyric sync, and emotion
-mapping).
+This document records the runtime architecture for the current VocalPlayer MVP
+and acts as a stable reference for future features.
 
-Current implemented scope:
+Implemented scope:
 
-- Input: single audio file or audio directory.
-- Playback: local decoded buffer playback via miniaudio.
-- Visualization: real-time spectrum bars and waveform in FTXUI.
-- Metadata: title and artist from TagLib (optional) with fallback strategy.
+- File or directory input.
+- Decoding + playback via miniaudio.
+- Real-time spectrum and waveform rendering in terminal.
+- Playlist interactions (`h/l`, `j/k`, `Space`, `Enter`, mouse select/scroll).
+- Optional metadata enrichment via TagLib.
 
 ## Component Diagram
 
@@ -35,43 +35,47 @@ flowchart LR
   visualFrame --> tuiRenderer
 ```
 
-## Sequence Diagram (Single Track)
+## Component Responsibilities
 
-```mermaid
-sequenceDiagram
-  participant User
-  participant Main as MainCLI
-  participant App as AppController
-  participant Playlist as PlaylistBuilder
-  participant Decoder
-  participant Metadata as MetadataReader
-  participant Audio as AudioEngine
-  participant Analyzer as SpectrumAnalyzer
-  participant UI as TuiRenderer
+- `main.cpp`
+  - Parses CLI argument and delegates control to `AppController::Run()`.
+- `AppController`
+  - Owns the session state machine.
+  - Coordinates decode, playback, analysis, and UI intents.
+- `BuildPlaylist()`
+  - Resolves input path into a sorted list of supported audio files.
+- `Decoder`
+  - Produces `DecodedTrack` (interleaved float PCM).
+  - Handles known-length and chunked fallback reads.
+- `MetadataReader`
+  - Creates `TrackInfo` from decoder metadata and optional TagLib tags.
+- `AudioEngine`
+  - Streams PCM to output device and tracks playback cursor/state.
+  - Exposes pause/resume and analysis window extraction.
+- `SpectrumAnalyzer`
+  - Converts mono windows into spectrum bars and waveform points.
+- `TuiRenderer`
+  - Renders the terminal view.
+  - Maps key/mouse input into `UiIntent` events.
 
-  User->>Main: run vocalplayer inputPath
-  Main->>App: Run(inputPath)
-  App->>Playlist: BuildPlaylist(inputPath)
-  Playlist-->>App: trackPaths
-  loop eachTrack
-    App->>Decoder: DecodeFile(trackPath)
-    Decoder-->>App: DecodedTrack
-    App->>Metadata: ReadTrackInfo(trackPath, sampleRate, channels, frames)
-    Metadata-->>App: TrackInfo
-    App->>Audio: Load(decodedTrack, trackInfo)
-    App->>Audio: Start()
-    App->>UI: Run(frameProvider, shouldStop)
-    loop refreshFrame
-      UI->>Audio: GetPlaybackState()
-      UI->>Audio: GetRecentMonoWindow(2048)
-      UI->>Analyzer: ComputeBars(monoWindow)
-      UI->>Analyzer: ComputeWaveform(monoWindow, 96)
-      UI-->>UI: render VisualFrame
-    end
-    App->>Audio: Stop()
-  end
-  App-->>Main: exitCode
-```
+## Interface Inventory
+
+- Application interfaces
+  - `int AppController::Run(const std::string& input_path)`
+  - `std::vector<std::string> BuildPlaylist(const std::string& input_path)`
+- Audio interfaces
+  - `DecodedTrack Decoder::DecodeFile(const std::string& path) const`
+  - `TrackInfo MetadataReader::ReadTrackInfo(...) const`
+  - `AudioEngine::{Load, Start, Pause, Resume, TogglePause, Stop}`
+  - `PlaybackState AudioEngine::GetPlaybackState() const`
+  - `std::vector<float> AudioEngine::GetRecentMonoWindow(uint32_t) const`
+- Analysis interface
+  - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
+  - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
+- UI interfaces
+  - `void TuiRenderer::Run(...)`
+  - `UiIntent` enum for playback/navigation intents
+  - `Keybindings` + `DefaultKeybindings()` for configurable key mapping
 
 ## Overall Architecture Diagram
 
@@ -100,6 +104,7 @@ flowchart TB
 
   subgraph presentationLayer [PresentationLayer]
     tuiRenderer[TuiRenderer]
+    keybindings[Keybindings]
   end
 
   mainCli --> appController
@@ -120,28 +125,96 @@ flowchart TB
   audioEngine --> dataTypes
   spectrumAnalyzer --> dataTypes
   tuiRenderer --> dataTypes
+  keybindings --> tuiRenderer
 ```
+
+## Sequence Diagram (Single Track Session)
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Main as MainCLI
+  participant App as AppController
+  participant Playlist as PlaylistBuilder
+  participant Decoder
+  participant Metadata as MetadataReader
+  participant Audio as AudioEngine
+  participant Analyzer as SpectrumAnalyzer
+  participant UI as TuiRenderer
+
+  User->>Main: run vocalplayer inputPath
+  Main->>App: Run(inputPath)
+  App->>Playlist: BuildPlaylist(inputPath)
+  Playlist-->>App: trackPaths
+  loop eachTrack
+    App->>Decoder: DecodeFile(trackPath)
+    Decoder-->>App: DecodedTrack
+    App->>Metadata: ReadTrackInfo(...)
+    Metadata-->>App: TrackInfo
+    App->>Audio: Load(decodedTrack, trackInfo)
+    App->>Audio: Start()
+    App->>UI: Run(frameProvider, playlistProvider, onIntent, ...)
+    loop refreshTick
+      UI->>Audio: GetPlaybackState()
+      UI->>Audio: GetRecentMonoWindow(2048)
+      UI->>Analyzer: ComputeBars(monoWindow)
+      UI->>Analyzer: ComputeWaveform(monoWindow, 96)
+      UI-->>UI: render VisualFrame
+    end
+    App->>Audio: Stop()
+  end
+  App-->>Main: exitCode
+```
+
+## Data Flow Diagram
+
+```mermaid
+flowchart LR
+  fileInput[FileOrDirectoryInput] --> playlistBuilder[BuildPlaylist]
+  playlistBuilder --> trackPath[TrackPath]
+  trackPath --> decoder[Decoder]
+  decoder --> decodedTrack[DecodedTrack_PCM]
+  trackPath --> metadataReader[MetadataReader]
+  metadataReader --> trackInfo[TrackInfo]
+  decodedTrack --> audioEngine[AudioEngine]
+  trackInfo --> audioEngine
+  audioEngine --> monoWindow[MonoWindow]
+  monoWindow --> spectrumAnalyzer[SpectrumAnalyzer]
+  spectrumAnalyzer --> spectrumBars[SpectrumBars]
+  spectrumAnalyzer --> waveformPoints[WaveformPoints]
+  audioEngine --> playbackState[PlaybackState]
+  trackInfo --> visualFrame[VisualFrame]
+  playbackState --> visualFrame
+  spectrumBars --> visualFrame
+  waveformPoints --> visualFrame
+  visualFrame --> tuiRenderer[TuiRenderer]
+  userInput[KeyboardAndMouseInput] --> tuiRenderer
+  tuiRenderer --> uiIntent[UiIntent]
+  uiIntent --> appController[AppControllerStateMachine]
+  appController --> audioEngine
+```
+
+## Runtime Data Flow Notes
+
+- Data is intentionally one-directional for rendering:
+  `AudioEngine -> SpectrumAnalyzer -> VisualFrame -> TuiRenderer`.
+- Control travels in the opposite direction:
+  `UserInput -> TuiRenderer -> UiIntent -> AppController`.
+- `VisualFrame` is immutable per tick, reducing cross-module coupling and easing
+  Rust migration.
+- `AudioEngine` is the single source of truth for elapsed position and play
+  state (`playing`, `paused`, `finished`).
 
 ## Data Contracts
 
-- `DecodedTrack`: interleaved float samples and stream format info.
-- `TrackInfo`: source path, title, artist, duration, sample format metadata.
-- `PlaybackState`: elapsed and duration plus runtime flags.
-- `VisualFrame`: UI-facing immutable snapshot assembled every refresh tick.
-
-This contract-oriented approach allows Rust migration by replacing module
-implementations while preserving stable data boundaries.
-
-## Runtime Notes
-
-- Current loop model is single track at a time, sequence playback for playlist.
-- Pressing `q` exits current TUI session and stops remaining playlist playback.
-- Decoder has both known-length and chunked fallback read paths for broader
-  format compatibility.
+- `DecodedTrack`: interleaved float PCM plus stream format.
+- `TrackInfo`: source and display metadata for active track.
+- `PlaybackState`: elapsed time, duration, and runtime flags.
+- `VisualFrame`: complete UI tick payload.
 
 ## Planned Evolution
 
-- Theme system: configurable rendering style and color palettes.
-- Lyric timeline: LRC parsing and synchronized line rendering.
-- Beat pulse: lightweight onset-driven visual triggers.
-- Emotion mapping: rule-based labels first, model-based inference later.
+- Theme system with configurable style presets.
+- LRC timeline parser and lyric sync renderer.
+- Beat-driven pulse effects.
+- Rule-based emotion tags, then model-based inference.

@@ -10,6 +10,7 @@
 namespace vocalplayer {
 namespace {
 
+// Lowercase ASCII text for extension comparison.
 std::string ToLower(std::string value) {
   std::transform(
       value.begin(), value.end(), value.begin(),
@@ -17,6 +18,7 @@ std::string ToLower(std::string value) {
   return value;
 }
 
+// Check whether file extension is playable in current MVP.
 bool IsSupportedAudioFile(const std::filesystem::path& file_path) {
   static const std::vector<std::string> kSupportedExtensions = {
       ".wav", ".flac", ".mp3", ".ogg", ".opus", ".m4a", ".aac"};
@@ -27,6 +29,7 @@ bool IsSupportedAudioFile(const std::filesystem::path& file_path) {
 
 }  // namespace
 
+// Resolve input path into a normalized sorted playlist.
 std::vector<std::string> BuildPlaylist(const std::string& input_path) {
   std::filesystem::path path(input_path);
   if (!std::filesystem::exists(path)) {

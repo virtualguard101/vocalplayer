@@ -11,6 +11,7 @@
 namespace vocalplayer {
 namespace {
 
+// Build display-friendly short names from absolute playlist paths.
 std::vector<std::string> BuildTrackDisplayNames(
     const std::vector<std::string>& playlist) {
   std::vector<std::string> names;
@@ -21,6 +22,7 @@ std::vector<std::string> BuildTrackDisplayNames(
   return names;
 }
 
+// Clamp playlist index to a safe range.
 int ClampIndex(int index, int track_count) {
   if (track_count <= 0) {
     return 0;
@@ -30,6 +32,7 @@ int ClampIndex(int index, int track_count) {
 
 }  // namespace
 
+// Execute the full app runtime loop (playlist + playback + UI intents).
 int AppController::Run(const std::string& input_path) {
   try {
     std::vector<std::string> playlist = BuildPlaylist(input_path);

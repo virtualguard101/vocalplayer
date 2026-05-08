@@ -13,8 +13,22 @@
 
 namespace vocalplayer {
 
+/**
+ * @brief High-level application orchestrator for playlist playback.
+ *
+ * AppController wires decoding, metadata loading, audio playback, analysis,
+ * and TUI rendering into one runtime loop.
+ */
 class AppController {
  public:
+  /**
+   * @brief Start the player with a file path or directory path.
+   *
+   * @param input_path Audio file path or directory path for playlist scan.
+   * @return Process-style exit code. 0 means success.
+   *
+   * @note This function owns the main playback state machine.
+   */
   int Run(const std::string& input_path);
 
  private:

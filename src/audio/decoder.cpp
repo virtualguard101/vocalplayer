@@ -11,12 +11,14 @@
 namespace vocalplayer {
 namespace {
 
+// Build a readable error message from miniaudio status code.
 std::string BuildMiniaudioError(const std::string& action, ma_result result) {
   return action + " failed: " + std::to_string(result);
 }
 
 }  // namespace
 
+// Decode file to interleaved PCM float samples.
 DecodedTrack Decoder::DecodeFile(const std::string& path) const {
   ma_decoder_config config =
       ma_decoder_config_init(ma_format_f32, 0, 0);  // Native channels/rate.

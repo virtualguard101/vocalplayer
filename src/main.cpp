@@ -3,6 +3,7 @@
 
 #include "app/app_controller.hpp"
 
+// CLI entry point. Delegates runtime orchestration to AppController.
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: vocalplayer <audio-file-or-directory>" << std::endl;

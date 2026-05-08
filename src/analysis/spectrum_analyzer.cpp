@@ -13,16 +13,19 @@ namespace {
 
 constexpr float kPi = 3.14159265358979323846f;
 
+// Clamp float into [0, 1] range.
 float Clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
 
 }  // namespace
 
 struct SpectrumAnalyzer::Impl {
+  // Allocate kissfft config and buffers for one analyzer instance.
   explicit Impl(int fft_size)
       : cfg(kiss_fft_alloc(fft_size, 0, nullptr, nullptr)),
         input(fft_size),
         output(fft_size) {}
 
+  // Release FFT plan allocated by kissfft.
   ~Impl() { free(cfg); }
 
   kiss_fft_cfg cfg = nullptr;
@@ -30,6 +33,7 @@ struct SpectrumAnalyzer::Impl {
   std::vector<kiss_fft_cpx> output;
 };
 
+// Construct FFT analyzer state and validate runtime parameters.
 SpectrumAnalyzer::SpectrumAnalyzer(uint32_t fft_size, uint32_t bar_count,
                                    float smooth_factor)
     : fft_size_(fft_size),
@@ -48,8 +52,10 @@ SpectrumAnalyzer::SpectrumAnalyzer(uint32_t fft_size, uint32_t bar_count,
   }
 }
 
+// Release opaque FFT implementation state.
 SpectrumAnalyzer::~SpectrumAnalyzer() { delete impl_; }
 
+// Compute smoothed log-compressed spectrum bars from mono window.
 std::vector<float> SpectrumAnalyzer::ComputeBars(
     const std::vector<float>& mono_window) {
   std::vector<float> padded(fft_size_, 0.0f);
@@ -94,6 +100,7 @@ std::vector<float> SpectrumAnalyzer::ComputeBars(
   return smoothed_bars_;
 }
 
+// Resample mono window into fixed-count waveform points for terminal drawing.
 std::vector<float> SpectrumAnalyzer::ComputeWaveform(
     const std::vector<float>& mono_window, uint32_t points) const {
   std::vector<float> waveform(points, 0.0f);

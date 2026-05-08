@@ -21,11 +21,13 @@ using namespace ftxui;  // NOLINT
 constexpr int kPlaylistVisibleRows = 10;
 constexpr int kPlaylistStartY = 16;
 
+// Build a one-column spectrum bar using repeated characters.
 std::string BuildBar(float value, int height) {
   int filled = static_cast<int>(value * static_cast<float>(height));
   return std::string(std::max(filled, 0), '#');
 }
 
+// Render normalized spectrum bars into a fixed-height row block.
 Element RenderSpectrum(const std::vector<float>& bars) {
   std::vector<Element> cols;
   cols.reserve(bars.size());
@@ -39,6 +41,7 @@ Element RenderSpectrum(const std::vector<float>& bars) {
   return hbox(std::move(cols)) | size(HEIGHT, EQUAL, kMaxBarHeight);
 }
 
+// Render waveform points as lightweight ASCII intensity glyphs.
 Element RenderWaveform(const std::vector<float>& wave) {
   std::vector<Element> points;
   points.reserve(wave.size());
@@ -50,11 +53,13 @@ Element RenderWaveform(const std::vector<float>& wave) {
   return hbox(std::move(points));
 }
 
+// Clamp playlist viewport start offset into valid range.
 int ClampOffset(int offset, int track_count, int visible_rows) {
   int max_offset = std::max(0, track_count - visible_rows);
   return std::clamp(offset, 0, max_offset);
 }
 
+// Scroll viewport only when selection goes out of visible window.
 int FollowSelectedOffset(int selected_index, int offset, int visible_rows) {
   if (selected_index < offset) {
     return selected_index;
@@ -65,6 +70,7 @@ int FollowSelectedOffset(int selected_index, int offset, int visible_rows) {
   return offset;
 }
 
+// Render a windowed playlist view with optional leading/trailing ellipsis rows.
 Element RenderPlaylist(const PlaylistViewModel& playlist, int view_offset,
                        int visible_rows) {
   view_offset = ClampOffset(
@@ -101,6 +107,7 @@ Element RenderPlaylist(const PlaylistViewModel& playlist, int view_offset,
   return vbox(std::move(rows)) | size(HEIGHT, LESS_THAN, visible_rows + 2);
 }
 
+// Render highlighted selection status line for pending vs live target.
 Element RenderSelectionStatus(const PlaylistViewModel& playlist) {
   if (playlist.tracks.empty()) {
     return text("Selected: none (playlist is empty)") | color(Color::GrayDark);
@@ -126,6 +133,7 @@ Element RenderSelectionStatus(const PlaylistViewModel& playlist) {
 
 }  // namespace
 
+// Run one interactive TUI session and map raw input to playback intents.
 void TuiRenderer::Run(
     const std::function<VisualFrame()>& frame_provider,
     const std::function<PlaylistViewModel()>& playlist_provider,
@@ -328,6 +336,7 @@ void TuiRenderer::Run(
   }
 }
 
+// Build textual progress bar from playback ratio.
 std::string TuiRenderer::BuildProgressBar(float ratio, int width) {
   ratio = std::clamp(ratio, 0.0f, 1.0f);
   int filled = static_cast<int>(ratio * static_cast<float>(width));

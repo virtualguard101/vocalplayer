@@ -3,7 +3,7 @@
 本文件用于记录 VocalPlayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
-## [Unreleased]
+## [0.1.1] - 2026-05-10
 
 ### Added
 - 新增`todo.md`，用于记录待办事项与更新计划。
@@ -16,8 +16,8 @@
 
 ### Changed
 - 扩展 `justfile`：
-  - `hook-install`：安装 pre-commit hook
-  - `check-fast`：执行本地快速门禁（配置、构建快速测试目标并运行对应测试）
+  - `quick-check`（含 `qc` 别名）：执行本地快速门禁（配置、构建快速测试目标并运行对应测试）
+  - `bootstrap`：在初始化 LSP 环境时同时安装 pre-commit hooks
 
 ### DevEx
 - 新增 `.clang-tidy` 基线配置，启用 `bugprone/performance/portability/readability` 主规则集。

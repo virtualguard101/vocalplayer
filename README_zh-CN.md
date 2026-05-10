@@ -94,6 +94,5 @@ just build
 
 ### 贡献
 
-贡献流程相关内容（pre-commit hooks、本地质量门禁、CI、发布 tag）统一见
-[`contributing.md`](contributing.md)。
+贡献流程相关内容参见[`contributing_zh-CN.md`](contributing_zh-CN.md)（[English](contributing.md)）。
 

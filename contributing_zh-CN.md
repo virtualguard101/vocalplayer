@@ -15,7 +15,7 @@
 just bootstrap
 ```
 
-该命令会完成 CMake 配置并链接 `compile_commands.json` 供 clangd/LSP 使用，以及安装 `pre-commit` hooks。
+该命令会完成 CMake 配置并链接 `compile_commands.json` 供 clangd/LSP 使用，并执行 `pre-commit install` 安装 git hooks。
 
 ## 本地质量门禁
 
@@ -52,7 +52,7 @@ just test
 安装 `pre-commit`：
 ```bash
 pip install pre-commit
-pre-commit install
+just bootstrap
 ```
 
 默认 hooks 会执行：
@@ -69,12 +69,20 @@ just qc
 just test
 ```
 
-建议开发过程中跑 `just qc`，发起 PR 前跑 `just test`。
+建议开发过程中跑 `just qc`（`just quick-check` 的别名），发起 PR 前跑
+`just test`。
 
-## CI 与发布
+## CI
 
-- CI（PR / push 到 `main`）：
-  - 对改动 C++ 源文件运行 `clang-tidy`（当前为非阻断引导阶段）
-  - Linux 构建 + 全量测试
-- Release（push `v*.*.*` tag）：
-  - 自动构建并发布 Linux/macOS/Windows 产物
+PR / push 到 `main` 时，CI 会自动运行 `clang-tidy` + Linux 构建测试流水线。
+
+## 发布
+
+推送 `v*.*.*` tag 时，CI 会自动构建并发布 Linux/macOS/Windows 产物。
+
+注意使用 [Semantic Versioning](https://semver.org/) 规范的版本号。
+
+```bash
+git tag -a v0.1.0 -m "Release version 0.1.0"
+git push --tags
+```

@@ -46,7 +46,8 @@ just test
 just bootstrap
 ```
 
-This configures CMake and links `compile_commands.json` for clangd/LSP.
+This configures CMake, links `compile_commands.json` for clangd/LSP, and
+installs git hooks via `pre-commit install`.
 
 ## Local Quality Gates
 
@@ -54,7 +55,7 @@ This configures CMake and links `compile_commands.json` for clangd/LSP.
 
 ```bash
 pip install pre-commit
-pre-commit install
+just bootstrap
 ```
 
 Configured hooks run:
@@ -71,7 +72,8 @@ just qc
 just test
 ```
 
-Use `just qc` for quick feedback and `just test` before opening a PR.
+Use `just qc` (alias of `just quick-check`) for quick feedback, and run
+`just test` before opening a PR.
 
 ## CI
 
@@ -88,7 +90,7 @@ Release workflow triggers when a semantic version tag is pushed:
 
 ```bash
 git tag v0.2.0
-git push origin v0.2.0
+git push --tags
 ```
 
 It builds, tests, and publishes artifacts for Linux, macOS, and Windows.

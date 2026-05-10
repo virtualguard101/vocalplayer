@@ -95,5 +95,4 @@ just build
 
 ### Contributing
 
-Contributor-oriented workflows (pre-commit hooks, local quality gates, CI, and
-release tagging) are documented in [`contributing.md`](contributing.md).
+Contributor-oriented workflows are documented in [`contributing.md`](contributing.md) ([简体中文](contributing_zh-CN.md)).

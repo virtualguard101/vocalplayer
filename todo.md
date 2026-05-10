@@ -18,13 +18,13 @@
 
 ## Project Engineering Practices:
 
-- [x] Formatted code with clang-format
+- [x] Formatted code with clang-format (in `v0.1.0`)
 
-- [x] Add LSP and clangd quick setup in `justfile`
+- [x] Add LSP and clangd quick setup in `justfile` (in `v0.1.0`)
 
-- [x] Add pre-commit hooks for clang-format and tests
+- [x] Add pre-commit hooks for clang-format and tests (in `v0.1.1`)
 
-- [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline
+- [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline (in `v0.1.1`)
 
 ## Longterm Plan
 

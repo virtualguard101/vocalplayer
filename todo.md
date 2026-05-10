@@ -16,6 +16,8 @@
 
 - v0.2.0: 频谱/波形可视化UI增强
 
+- v0.3.0: 引入ncmdump API；实现自动读取网易云本地音乐库；
+
 ## Project Engineering Practices:
 
 - [x] Formatted code with clang-format (in `v0.1.0`)

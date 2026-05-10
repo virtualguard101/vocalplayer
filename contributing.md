@@ -94,3 +94,11 @@ git push --tags
 ```
 
 It builds, tests, and publishes artifacts for Linux, macOS, and Windows.
+
+### Release Process
+
+1. Develop and document in `dev` branch, update `changelog.md` and project metadata, and submit PR.
+2. Maintainer merges PR to `main`, CI automatically runs `clang-tidy` + Linux build/test pipeline.
+3. Switch to `main` branch locally, and execute `git pull` to fetch latest code.
+4. Execute `git tag -a v*.*.*` to create a new version tag.
+5. Execute `git push --tags` to push the tag to the remote repository, which triggers the GitHub Actions release workflow, building and uploading Linux/macOS/Windows triple-platform artifacts.

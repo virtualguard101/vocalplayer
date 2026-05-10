@@ -28,6 +28,8 @@
 
 ## Longterm Plan
 
+- [ ] Rust Version: Rust并行实现
+
 - [ ] Analyzer Backend 抽象：将现有 `SpectrumAnalyzer` 拆分为前端调度层 + 后端接口（`IAnalyzerBackend`），支持 CPU/CUDA 双实现。
 
 - [ ] CPU Baseline 固化：保留 `kissfft` 路径作为基线实现，并补充基准测试（latency/CPU usage/frame jitter）用于后续 CUDA 对比。

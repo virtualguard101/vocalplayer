@@ -1,3 +1,12 @@
+/**
+ * @file playlist.cpp
+ * @brief Implements playlist construction from file or directory inputs.
+ *
+ * Key points:
+ * - Validates input path existence and supported media extensions.
+ * - Scans directory entries and filters playable audio files.
+ * - Returns normalized absolute paths sorted for deterministic order.
+ */
 #include "app/playlist.hpp"
 
 #include <algorithm>
@@ -18,7 +27,7 @@ std::string ToLower(std::string value) {
   return value;
 }
 
-// Check whether file extension is playable in current MVP.
+// Check whether file extension is playable.
 bool IsSupportedAudioFile(const std::filesystem::path& file_path) {
   static const std::vector<std::string> kSupportedExtensions = {
       ".wav", ".flac", ".mp3", ".ogg", ".opus", ".m4a", ".aac"};

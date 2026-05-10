@@ -1,3 +1,12 @@
+/**
+ * @file decoder.cpp
+ * @brief Implements compressed-audio decoding into interleaved float PCM.
+ *
+ * Key points:
+ * - Uses miniaudio decoder APIs to open files and read PCM frames.
+ * - Handles both known-length and unknown-length streams efficiently.
+ * - Produces DecodedTrack with samples, channel count, and sample rate.
+ */
 #include "audio/decoder.hpp"
 
 #include <cstddef>
@@ -20,10 +29,13 @@ std::string BuildMiniaudioError(const std::string& action, ma_result result) {
 
 // Decode file to interleaved PCM float samples.
 DecodedTrack Decoder::DecodeFile(const std::string& path) const {
+  // Initialize decoder output as float PCM by miniaudio API; use source-native
+  // channels/rate.
   ma_decoder_config config =
       ma_decoder_config_init(ma_format_f32, 0, 0);  // Native channels/rate.
 
   ma_decoder decoder;
+  // Open file and bind it to a miniaudio decoder instance.
   ma_result result = ma_decoder_init_file(path.c_str(), &config, &decoder);
   if (result != MA_SUCCESS) {
     throw std::runtime_error(
@@ -31,6 +43,7 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
   }
 
   ma_uint64 frame_count = 0;
+  // Query total frame count to decide between bulk-read and chunked-read path.
   result = ma_decoder_get_length_in_pcm_frames(&decoder, &frame_count);
   if (result != MA_SUCCESS) {
     ma_decoder_uninit(&decoder);
@@ -39,6 +52,7 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
   }
 
   DecodedTrack decoded;
+  // Capture the actual output stream format resolved by the decoder.
   decoded.channels = decoder.outputChannels;
   decoded.sample_rate_hz = decoder.outputSampleRate;
   if (decoded.channels == 0 || decoded.sample_rate_hz == 0) {
@@ -47,6 +61,7 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
   }
 
   if (frame_count > 0) {
+    // Known length: pre-allocate once and read as many frames as available.
     decoded.interleaved_samples.resize(frame_count * decoded.channels);
     ma_uint64 read_frames = 0;
     result =
@@ -59,6 +74,7 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
     }
     decoded.interleaved_samples.resize(read_frames * decoded.channels);
   } else {
+    // Unknown length: stream in fixed-size chunks until end-of-file.
     constexpr ma_uint64 kChunkFrames = 4096;
     std::vector<float> chunk(kChunkFrames * decoded.channels, 0.0f);
     while (true) {
@@ -71,6 +87,7 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
             BuildMiniaudioError("ma_decoder_read_pcm_frames", result));
       }
       if (read_frames == 0) {
+        // No more decoded frames available.
         break;
       }
       size_t copy_samples = static_cast<size_t>(read_frames * decoded.channels);
@@ -82,9 +99,11 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
 
   decoded.frame_count = static_cast<ma_uint64>(
       decoded.interleaved_samples.size() / decoded.channels);
+  // Always release decoder resources before returning or throwing.
   ma_decoder_uninit(&decoder);
 
   if (decoded.frame_count == 0) {
+    // Treat empty decode result as invalid input/unsupported media.
     throw std::runtime_error(
         "Decoded audio has zero frames. The file may be empty or unsupported.");
   }

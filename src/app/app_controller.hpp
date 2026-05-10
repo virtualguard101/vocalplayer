@@ -1,3 +1,12 @@
+/**
+ * @file app_controller.hpp
+ * @brief Declares AppController, the high-level player workflow coordinator.
+ *
+ * Key points:
+ * - Defines Run() as the main application control entry.
+ * - Aggregates decoding, metadata, playback, analysis, and UI modules.
+ * - Encapsulates runtime state machine ownership in one class.
+ */
 #ifndef VOCALPLAYER_SRC_APP_APP_CONTROLLER_HPP_
 #define VOCALPLAYER_SRC_APP_APP_CONTROLLER_HPP_
 

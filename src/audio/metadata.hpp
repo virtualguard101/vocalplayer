@@ -1,3 +1,12 @@
+/**
+ * @file metadata.hpp
+ * @brief Declares metadata reader interfaces for UI-facing track details.
+ *
+ * Key points:
+ * - Defines MetadataReader contract for building TrackInfo objects.
+ * - Accepts decoded stream fields to compute duration and technical info.
+ * - Keeps metadata extraction separate from decoding/playback modules.
+ */
 #ifndef VOCALPLAYER_SRC_AUDIO_METADATA_HPP_
 #define VOCALPLAYER_SRC_AUDIO_METADATA_HPP_
 

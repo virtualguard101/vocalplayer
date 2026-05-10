@@ -1,3 +1,12 @@
+/**
+ * @file main.cpp
+ * @brief Defines the CLI entry point for VocalPlayer.
+ *
+ * Key points:
+ * - Validates required command-line input path.
+ * - Constructs AppController and delegates runtime orchestration.
+ * - Returns process-style exit code for shell integration.
+ */
 #include <iostream>
 #include <string>
 

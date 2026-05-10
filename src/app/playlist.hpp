@@ -1,3 +1,12 @@
+/**
+ * @file playlist.hpp
+ * @brief Declares helpers for constructing a playable track list.
+ *
+ * Key points:
+ * - Exposes BuildPlaylist() as the path-to-playlist conversion API.
+ * - Supports single-file inputs and directory-based scans.
+ * - Returns absolute paths for downstream playback modules.
+ */
 #ifndef VOCALPLAYER_SRC_APP_PLAYLIST_HPP_
 #define VOCALPLAYER_SRC_APP_PLAYLIST_HPP_
 

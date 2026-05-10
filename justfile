@@ -12,8 +12,6 @@ format:
 test:
     ctest --test-dir build --output-on-failure
 
-run audio_file_path:
-    ./build/vocalplayer {{audio_file_path}}
-
 clean:
     rm -rf build
+    rm -f compile_commands.json

@@ -1,3 +1,12 @@
+/**
+ * @file spectrum_analyzer.hpp
+ * @brief Declares FFT analyzer APIs for terminal visualization features.
+ *
+ * Key points:
+ * - Configures FFT size, bar count, and smoothing policy.
+ * - Exposes ComputeBars() for spectrum visualization.
+ * - Exposes ComputeWaveform() for compact waveform rendering.
+ */
 #ifndef VOCALPLAYER_SRC_ANALYSIS_SPECTRUM_ANALYZER_HPP_
 #define VOCALPLAYER_SRC_ANALYSIS_SPECTRUM_ANALYZER_HPP_
 

@@ -1,3 +1,12 @@
+/**
+ * @file audio_engine.hpp
+ * @brief Declares AudioEngine, the miniaudio-backed runtime playback module.
+ *
+ * Key points:
+ * - Defines playback lifecycle APIs: Load/Start/Pause/Resume/Stop.
+ * - Stores decoded PCM data, track metadata, and atomic playback flags.
+ * - Declares callback entry points used by the output device thread.
+ */
 #ifndef VOCALPLAYER_SRC_AUDIO_AUDIO_ENGINE_HPP_
 #define VOCALPLAYER_SRC_AUDIO_AUDIO_ENGINE_HPP_
 
@@ -27,6 +36,12 @@ class AudioEngine {
    */
   ~AudioEngine();
 
+  /**
+   * @brief Disable copy semantics to preserve unique engine ownership.
+   *
+   * Copying would duplicate resource handles and callback state, which can
+   * cause double-release and data races across playback/control threads.
+   */
   AudioEngine(const AudioEngine&) = delete;
   AudioEngine& operator=(const AudioEngine&) = delete;
 
@@ -62,6 +77,8 @@ class AudioEngine {
    * @brief Get current playback status snapshot.
    *
    * @return PlaybackState with elapsed/duration and flags.
+   * @note Uses `[[nodiscard]]` to indicate that the function should not be
+   * called without capturing the result. The same for above functions.
    */
   [[nodiscard]] PlaybackState GetPlaybackState() const;
   /**
@@ -95,6 +112,9 @@ class AudioEngine {
 
   DecodedTrack decoded_track_;
   TrackInfo track_info_;
+
+  // Atomic variables to track the current frame, playing state, and finished
+  // state.
   std::atomic<uint64_t> current_frame_{0};
   std::atomic<bool> is_playing_{false};
   std::atomic<bool> is_finished_{false};

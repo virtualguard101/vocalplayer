@@ -1,45 +1,36 @@
-# VocalPlayer
+<div align="center">
 
-VocalPlayer is a creative CLI music player MVP built with C++ that focuses on
-real-time rhythm visualization in the terminal.
+# vocalplayer
 
-## MVP Features
+English | [简体中文](README_zh-CN.md)
 
-- Local audio playback (`wav` and any format supported by miniaudio decoder).
-- Directory scan + simple sorted playlist playback.
+A creative C++ CLI music player with real-time rhythm visualization in the terminal.
+
+</div>
+
+vocalplayer is a creative CLI music player built with C++, focused on
+real-time rhythm visualization in terminal environments.
+
+## Features
+
+- Local audio playback (`wav` and formats supported by the miniaudio decoder).
+- Directory scan + simple playlist sorted by name.
 - Real-time spectrum bars and waveform rendering in TUI mode.
 - Track metadata display (`title`, `artist`, and duration; TagLib optional).
-- Playlist interaction with Vim-style keybindings (`h/l/j/k`) and Enter confirm.
+- Vim-style playlist interaction (`h/l/j/k`) and Enter-to-play confirmation.
 
-## Dependencies
-
-- CMake >= 3.20
-- C++20 compiler (`clang++` or `g++`)
-- Optional: TagLib development package for richer metadata
-
-Third-party libraries are fetched automatically by CMake:
-
-- `miniaudio`
-- `kissfft`
-- `FTXUI`
-
-## Build
+## Usage
 
 ```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build build -j
-```
-
-## Run
-
-```bash
-./build/vocalplayer /path/to/song.wav
-./build/vocalplayer /path/to/music-directory
+./vocalplayer /path/to/song.wav
+./vocalplayer /path/to/music-directory
 ```
 
 Press `q` in the TUI to quit the current session.
 
-### TUI Keybindings
+## Interaction
+
+### Playback Interaction
 
 - `h`: previous track
 - `l`: next track
@@ -47,59 +38,61 @@ Press `q` in the TUI to quit the current session.
 - `j`: move playlist selection down
 - `k`: move playlist selection up
 - Mouse wheel: scroll playlist viewport
-- Mouse left click on playlist item: select track
-- `Enter`: play selected track
+- Left click on a playlist item: select that track only
+- `Enter`: play the currently selected track
 - `q`: quit
 
-### Keybinding Configuration (Reserved Interface)
+### Keybinding Configuration Interface (Reserved)
 
 `src/ui/keybindings.hpp` defines a `Keybindings` struct and
-`DefaultKeybindings()`. This is the stable extension point for future
-user-defined keybinding config files.
+`DefaultKeybindings()`. Future user-defined keybinding file loading can be
+built on top of this interface.
 
-## Formatting (Google C++ Style)
+## Development
 
-This repository follows Google C++ Style. A `.clang-format` configuration is
-already present in the repository root.
+### LSP / clangd Setup
 
-```bash
-rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i 
-```
-
-## Tests
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-## LSP / clangd Setup (Avoid False Errors)
-
-If you see many fake diagnostics like "header not found" in C++ files, clangd
-is usually missing compile commands.
-
-### First-time setup
+If you see many diagnostics like "header not found" in C++ files, clangd is
+usually missing the compile database (`compile_commands.json`).
 
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ln -sf build/compile_commands.json compile_commands.json
 ```
 
-Then reload the IDE window (or restart Cursor) to let clangd re-index.
+You can also use [Just](https://github.com/casey/just):
 
-### After `clean` (`rm -rf build`)
+```bash
+just bootstrap
+```
 
-You can delete `build`, but run configure again immediately:
+Then reload the IDE window so clangd can re-index.
+
+### Dependencies
+
+- CMake >= 3.20
+- C++20 compiler (`clang++` or `g++`)
+- Optional: TagLib development package (for richer metadata)
+
+CMake automatically fetches these third-party libraries:
+
+- `miniaudio`
+- `kissfft`
+- `FTXUI`
+
+### Build
 
 ```bash
 cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-ln -sf build/compile_commands.json compile_commands.json
+cmake --build build -j
 ```
 
-Without this step, clangd may report cascading false errors.
+or:
 
-## Current Scope
+```bash
+just build
+```
 
-The current MVP intentionally excludes:
+### Contributing
 
-- Emotion classification
-- Full keybinding config file loading
+Contributor-oriented workflows are documented in [`contributing.md`](contributing.md) ([简体中文](contributing_zh-CN.md)).

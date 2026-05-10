@@ -3,12 +3,26 @@
 本文件用于记录 VocalPlayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
-## [Unreleased]
+## [0.1.1] - 2026-05-10
 
-### Planned
-- 主题系统（配色与视觉风格预设）。
-- 歌词时间轴（LRC 解析与同步渲染）。
-- 键位配置文件读取（基于现有 `Keybindings` 接口扩展）。
+### Added
+- 新增`todo.md`，用于记录待办事项与更新计划。
+- 新增 `.pre-commit-config.yaml`，在提交前执行：
+  - 已暂存 C/C++ 文件 `clang-format` 自动修复（修复后阻止本次提交，要求重新暂存）
+  - 快速测试（`playlist_test`、`keybindings_test`）
+- 新增 GitHub Actions 发布流程 `.github/workflows/release.yml`：
+  - 推送 `v*.*.*` tag 时自动触发
+  - 生成并上传 Linux/macOS/Windows 三平台二进制产物
+
+### Changed
+- 扩展 `justfile`：
+  - `quick-check`（含 `qc` 别名）：执行本地快速门禁（配置、构建快速测试目标并运行对应测试）
+  - `bootstrap`：在初始化 LSP 环境时同时安装 pre-commit hooks
+
+### DevEx
+- 新增 `.clang-tidy` 基线配置，启用 `bugprone/performance/portability/readability` 主规则集。
+- 新增 `.github/workflows/ci.yml`，为 PR 与 `main` push 提供 `clang-tidy` + Linux 构建测试流水线。
+- 同步更新中英文 README 的工程实践章节（pre-commit、CI、release）。
 
 ## [0.1.0] - 2026-05-08
 

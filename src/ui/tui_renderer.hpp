@@ -1,3 +1,12 @@
+/**
+ * @file tui_renderer.hpp
+ * @brief Declares terminal UI contracts and renderer entry points.
+ *
+ * Key points:
+ * - Defines UiIntent and PlaylistViewModel for controller/UI boundaries.
+ * - Exposes TuiRenderer::Run() for one interactive session lifecycle.
+ * - Centralizes rendering and input callback interfaces.
+ */
 #ifndef VOCALPLAYER_SRC_UI_TUI_RENDERER_HPP_
 #define VOCALPLAYER_SRC_UI_TUI_RENDERER_HPP_
 

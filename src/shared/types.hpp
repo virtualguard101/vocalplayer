@@ -1,3 +1,12 @@
+/**
+ * @file types.hpp
+ * @brief Defines shared data contracts across decoding, playback, and UI.
+ *
+ * Key points:
+ * - Centralizes track metadata and playback snapshot structures.
+ * - Defines DecodedTrack as the PCM transport object between modules.
+ * - Defines VisualFrame as the renderer-facing aggregate view model.
+ */
 #ifndef VOCALPLAYER_SRC_SHARED_TYPES_HPP_
 #define VOCALPLAYER_SRC_SHARED_TYPES_HPP_
 

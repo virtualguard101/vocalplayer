@@ -1,3 +1,12 @@
+/**
+ * @file spectrum_analyzer.cpp
+ * @brief Implements FFT-based spectrum and waveform feature extraction.
+ *
+ * Key points:
+ * - Uses kissfft to transform mono windows into frequency-domain bins.
+ * - Applies log compression and smoothing for stable bar rendering.
+ * - Downsamples time-domain windows into normalized waveform points.
+ */
 #include "analysis/spectrum_analyzer.hpp"
 
 #include <algorithm>

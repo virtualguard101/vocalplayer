@@ -1,3 +1,14 @@
+/**
+ * @file audio_engine.cpp
+ * @brief Implements runtime playback control on top of miniaudio.
+ *
+ * Key points:
+ * - Owns decoded PCM buffers and playback metadata for one active track.
+ * - Bridges miniaudio callback thread to engine state via DataCallback().
+ * - Resets playback cursor/flags on Load() and rebuilds device configuration.
+ * - Exposes playback snapshots and recent mono windows for UI/analyzers.
+ */
+
 #include "audio/audio_engine.hpp"
 
 #include <algorithm>
@@ -24,25 +35,36 @@ AudioEngine::~AudioEngine() { Stop(); }
 // Load decoded PCM data and initialize a playback device for the stream format.
 void AudioEngine::Load(DecodedTrack decoded_track,
                        const TrackInfo& track_info) {
+  // Make sure the device is stopped before loading new data.
   Stop();
 
+  // Transfer ownership of the decoded track and track info to the audio engine
+  // by Move Semantics.
   decoded_track_ = std::move(decoded_track);
   track_info_ = track_info;
+  // Reset the current frame, playing state, and finished state.
   current_frame_.store(0);
   is_playing_.store(false);
   is_finished_.store(false);
 
+  // Initialize the miniaudio playback device configuration and fill it with the
+  // decoded track information.
   ma_device_config config = ma_device_config_init(ma_device_type_playback);
   config.playback.format = ma_format_f32;
   config.playback.channels = decoded_track_.channels;
   config.sampleRate = decoded_track_.sample_rate_hz;
+  // Set the data callback function to the AudioEngine::DataCallback function.
   config.dataCallback = AudioEngine::DataCallback;
+  // Set the user data pointer to the AudioEngine instance.
   config.pUserData = this;
 
+  // Pass playback device config to the miniaudio API to initialize the device.
   ma_result result = ma_device_init(nullptr, &config, &device_);
   if (result != MA_SUCCESS) {
     throw std::runtime_error(BuildMiniaudioError("ma_device_init", result));
   }
+  // Set the has device flag to true to indicate that the device has been
+  // initialized.
   has_device_ = true;
 }
 
@@ -106,6 +128,7 @@ void AudioEngine::Stop() {
 PlaybackState AudioEngine::GetPlaybackState() const {
   PlaybackState state;
   state.duration_sec = track_info_.duration_sec;
+  // Calculate the elapsed time in seconds.
   state.elapsed_sec = static_cast<double>(current_frame_.load()) /
                       static_cast<double>(decoded_track_.sample_rate_hz);
   state.is_playing = is_playing_.load();
@@ -128,6 +151,8 @@ std::vector<float> AudioEngine::GetRecentMonoWindow(
       current_frame > start_frame ? current_frame - start_frame : 0;
   uint64_t copy_frames = std::min<uint64_t>(window_size, available);
 
+  // Traverse the frames and calculate the average of the multiple channels
+  // samples.
   for (uint64_t i = 0; i < copy_frames; ++i) {
     uint64_t frame_index = start_frame + i;
     if (frame_index >= decoded_track_.frame_count) {
@@ -138,6 +163,8 @@ std::vector<float> AudioEngine::GetRecentMonoWindow(
       uint64_t sample_index = frame_index * decoded_track_.channels + ch;
       sum += decoded_track_.interleaved_samples[sample_index];
     }
+    // Write result of the average of the multiple channels samples to the mono
+    // window.
     mono_window[window_size - copy_frames + i] =
         sum / static_cast<float>(decoded_track_.channels);
   }
@@ -156,16 +183,24 @@ void AudioEngine::RenderFrames(float* output, ma_uint32 frame_count) {
   uint64_t start_frame = current_frame_.load();
   uint64_t total_frames = decoded_track_.frame_count;
   uint64_t channels = decoded_track_.channels;
+
+  // Calculate the remaining frames and the frames to copy.
   uint64_t remaining =
       (start_frame < total_frames) ? (total_frames - start_frame) : 0;
+
+  // Calculate the frames to copy according to the remaining frames and the
+  // requested frame count.
   uint64_t to_copy = std::min<uint64_t>(remaining, frame_count);
 
+  // Copy the decoded PCM data to the output buffer if there are remaining
+  // frames.
   if (to_copy > 0) {
     const float* src =
         decoded_track_.interleaved_samples.data() + (start_frame * channels);
     std::memcpy(output, src, to_copy * channels * sizeof(float));
   }
 
+  // If there are remaining frames, fill the output buffer with silence(0.0f).
   if (to_copy < frame_count) {
     float* silence = output + (to_copy * channels);
     std::memset(silence, 0, (frame_count - to_copy) * channels * sizeof(float));

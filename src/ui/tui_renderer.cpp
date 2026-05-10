@@ -1,3 +1,12 @@
+/**
+ * @file tui_renderer.cpp
+ * @brief Implements terminal rendering and user input dispatch with FTXUI.
+ *
+ * Key points:
+ * - Builds spectrum, waveform, progress, and playlist visual blocks.
+ * - Tracks playlist viewport and selection-follow behavior.
+ * - Converts keyboard/mouse events into high-level UiIntent callbacks.
+ */
 #include "ui/tui_renderer.hpp"
 
 #include <algorithm>

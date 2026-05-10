@@ -1,3 +1,12 @@
+/**
+ * @file keybindings.hpp
+ * @brief Declares configurable keyboard mappings for TUI interactions.
+ *
+ * Key points:
+ * - Defines Keybindings as a lightweight runtime key map.
+ * - Provides default Vim-like bindings via DefaultKeybindings().
+ * - Keeps input mapping independent from renderer implementation details.
+ */
 #ifndef VOCALPLAYER_SRC_UI_KEYBINDINGS_HPP_
 #define VOCALPLAYER_SRC_UI_KEYBINDINGS_HPP_
 

@@ -1,3 +1,12 @@
+/**
+ * @file decoder.hpp
+ * @brief Declares audio decoder interfaces that convert sources to PCM.
+ *
+ * Key points:
+ * - Provides Decoder as the primary decoding abstraction.
+ * - Defines DecodeFile() contract returning DecodedTrack.
+ * - Keeps room for alternate backends such as FFmpegDecoder.
+ */
 #ifndef VOCALPLAYER_SRC_AUDIO_DECODER_HPP_
 #define VOCALPLAYER_SRC_AUDIO_DECODER_HPP_
 
@@ -25,5 +34,11 @@ class Decoder {
 };
 
 }  // namespace vocalplayer
+
+class FFmpegDecoder {
+ public:
+  // TODO: Introducing a parallel implementation of a decoder based on the
+  // FFmpeg API.
+};
 
 #endif  // VOCALPLAYER_SRC_AUDIO_DECODER_HPP_

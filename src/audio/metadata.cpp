@@ -1,3 +1,12 @@
+/**
+ * @file metadata.cpp
+ * @brief Implements user-facing track metadata assembly.
+ *
+ * Key points:
+ * - Builds TrackInfo from decoded stream attributes and source path.
+ * - Derives fallback title/artist when embedded tags are unavailable.
+ * - Optionally enriches metadata with TagLib when enabled at build time.
+ */
 #include "audio/metadata.hpp"
 
 #include <filesystem>

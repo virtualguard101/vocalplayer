@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  clang-tidy:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy pkg-config
+
+      - name: Configure build
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Select changed C++ source files
+        id: changed
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+          if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="$(git rev-list --max-parents=0 HEAD)"
+          fi
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.cpp' '*.cc' '*.cxx' | tr '\n' ' ')"
+          echo "files=$changed_files" >> "$GITHUB_OUTPUT"
+          if [ -z "$changed_files" ]; then
+            echo "No changed C++ source files detected."
+          else
+            echo "Changed files: $changed_files"
+          fi
+
+      - name: Run clang-tidy on changed files
+        if: steps.changed.outputs.files != ''
+        run: |
+          set -euo pipefail
+          for file in ${{ steps.changed.outputs.files }}; do
+            echo "Running clang-tidy on $file"
+            clang-tidy "$file" -p build --config-file=.clang-tidy
+          done
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure build
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure

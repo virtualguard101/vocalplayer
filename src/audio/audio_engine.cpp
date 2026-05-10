@@ -151,7 +151,8 @@ std::vector<float> AudioEngine::GetRecentMonoWindow(
       current_frame > start_frame ? current_frame - start_frame : 0;
   uint64_t copy_frames = std::min<uint64_t>(window_size, available);
 
-  // Traverse the frames and calculate the average of the multiple channels samples.
+  // Traverse the frames and calculate the average of the multiple channels
+  // samples.
   for (uint64_t i = 0; i < copy_frames; ++i) {
     uint64_t frame_index = start_frame + i;
     if (frame_index >= decoded_track_.frame_count) {
@@ -162,7 +163,8 @@ std::vector<float> AudioEngine::GetRecentMonoWindow(
       uint64_t sample_index = frame_index * decoded_track_.channels + ch;
       sum += decoded_track_.interleaved_samples[sample_index];
     }
-    // Write result of the average of the multiple channels samples to the mono window.
+    // Write result of the average of the multiple channels samples to the mono
+    // window.
     mono_window[window_size - copy_frames + i] =
         sum / static_cast<float>(decoded_track_.channels);
   }
@@ -186,10 +188,12 @@ void AudioEngine::RenderFrames(float* output, ma_uint32 frame_count) {
   uint64_t remaining =
       (start_frame < total_frames) ? (total_frames - start_frame) : 0;
 
-  // Calculate the frames to copy according to the remaining frames and the requested frame count.
+  // Calculate the frames to copy according to the remaining frames and the
+  // requested frame count.
   uint64_t to_copy = std::min<uint64_t>(remaining, frame_count);
 
-  // Copy the decoded PCM data to the output buffer if there are remaining frames.
+  // Copy the decoded PCM data to the output buffer if there are remaining
+  // frames.
   if (to_copy > 0) {
     const float* src =
         decoded_track_.interleaved_samples.data() + (start_frame * channels);

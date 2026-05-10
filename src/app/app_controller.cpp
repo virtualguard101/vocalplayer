@@ -73,7 +73,8 @@ int AppController::Run(const std::string& input_path) {
             track_path, decoded.sample_rate_hz, decoded.channels,
             decoded.frame_count);
 
-        // Load the decoded track and the track info to the audio engine instance and start the playback.
+        // Load the decoded track and the track info to the audio engine
+        // instance and start the playback.
         audio_engine_.Load(std::move(decoded), track_info);
         audio_engine_.Start();
 
@@ -133,7 +134,8 @@ int AppController::Run(const std::string& input_path) {
               selected_index.store(
                   ClampIndex(next_selected_index, total_tracks));
             },
-            // Exit the UI loop when playback completes or a track switch is requested.
+            // Exit the UI loop when playback completes or a track switch is
+            // requested.
             [&] {
               PlaybackState state = audio_engine_.GetPlaybackState();
               return state.is_finished || switch_requested.load();
@@ -146,7 +148,8 @@ int AppController::Run(const std::string& input_path) {
         continue;
       }
 
-      // Get the playback state and stop the playback so that audio engine resources can be released after the UI session ends.
+      // Get the playback state and stop the playback so that audio engine
+      // resources can be released after the UI session ends.
       PlaybackState state = audio_engine_.GetPlaybackState();
       audio_engine_.Stop();
 
@@ -161,7 +164,8 @@ int AppController::Run(const std::string& input_path) {
         continue;
       }
 
-      // Playback next track or exit the application because of external request.
+      // Playback next track or exit the application because of external
+      // request.
       if (state.is_finished) {
         current_index += 1;
       } else {

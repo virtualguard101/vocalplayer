@@ -92,28 +92,8 @@ cmake --build build -j
 just build
 ```
 
-### 代码格式（Google C++ Style）
+### 贡献
 
-本仓库遵循 Google C++ Style。仓库根目录已提供 `.clang-format` 配置。
+贡献流程相关内容（pre-commit hooks、本地质量门禁、CI、发布 tag）统一见
+[`contributing.md`](contributing.md)。
 
-```bash
-rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i
-```
-
-或者：
-
-```bash
-just format
-```
-
-### 测试
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-或者：
-
-```bash
-just test
-```

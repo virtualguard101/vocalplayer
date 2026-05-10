@@ -14,13 +14,17 @@
 
 - [x] Code Review
 
-- [ ] Project Engineering Practices:
-
-  - [ ] Add pre-commit hooks for clang-format and tests
-
-  - [ ] Add clang-tidy checks in GitHub CI/CD pipeline
-
 - v0.2.0: 频谱/波形可视化UI增强
+
+## Project Engineering Practices:
+
+- [x] Formatted code with clang-format
+
+- [x] Add LSP and clangd quick setup in `justfile`
+
+- [x] Add pre-commit hooks for clang-format and tests
+
+- [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline
 
 ## Longterm Plan
 

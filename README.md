@@ -93,29 +93,7 @@ or:
 just build
 ```
 
-### Formatting (Google C++ Style)
+### Contributing
 
-This repository follows Google C++ Style. A `.clang-format` config is provided
-in the repository root.
-
-```bash
-rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i
-```
-
-or:
-
-```bash
-just format
-```
-
-### Tests
-
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-or:
-
-```bash
-just test
-```
+Contributor-oriented workflows (pre-commit hooks, local quality gates, CI, and
+release tagging) are documented in [`contributing.md`](contributing.md).

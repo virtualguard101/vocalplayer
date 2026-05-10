@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x86_64
+            package_format: tar.gz
+          - os: macos-latest
+            label: macos-x86_64
+            package_format: tar.gz
+          - os: windows-latest
+            label: windows-x86_64
+            package_format: zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure build
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_name="${GITHUB_REF_NAME}"
+          package_name="vocalplayer-${tag_name}-${{ matrix.label }}"
+          stage_dir="dist/${package_name}"
+          mkdir -p "$stage_dir"
+          if [ -f build/vocalplayer ]; then
+            cp build/vocalplayer "$stage_dir/"
+          elif [ -f build/vocalplayer.exe ]; then
+            cp build/vocalplayer.exe "$stage_dir/"
+          elif [ -f build/Release/vocalplayer.exe ]; then
+            cp build/Release/vocalplayer.exe "$stage_dir/"
+          else
+            echo "vocalplayer binary not found after build." >&2
+            exit 1
+          fi
+          if [ "${{ matrix.package_format }}" = "zip" ]; then
+            cmake -E tar "cfv" "dist/${package_name}.zip" --format=zip "$stage_dir"
+          else
+            cmake -E tar "cfvz" "dist/${package_name}.tar.gz" --format=gnutar "$stage_dir"
+          fi
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

@@ -28,6 +28,8 @@
 
 - [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline (in `v0.1.1`)
 
+- [ ] Add xmake build config support
+
 ## Longterm Plan
 
 - [ ] Rust Version: Rust并行实现

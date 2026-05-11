@@ -205,7 +205,7 @@ void TuiRenderer::Run(
     }
 
     return vbox({
-               text("VocalPlayer MVP") | bold,
+               text("vocalplayer") | bold,
                separator(),
                text("Title: " + latest_frame.track_info.title),
                text("Artist: " + latest_frame.track_info.artist),

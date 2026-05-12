@@ -10,12 +10,37 @@
 #include <iostream>
 #include <string>
 
+#if defined(_WIN32)
+#include <windows.h>
+
+#include <clocale>
+#include <locale>
+#endif
+
 #include "app/app_controller.hpp"
+
+#if defined(_WIN32)
+// Enable UTF-8 console IO so CJK metadata can render correctly.
+void InitializeWindowsUtf8Console() {
+  SetConsoleOutputCP(CP_UTF8);
+  SetConsoleCP(CP_UTF8);
+  setlocale(LC_ALL, ".UTF-8");
+  try {
+    std::locale::global(std::locale(".UTF-8"));
+  } catch (...) {
+    // Keep process running even if a UTF-8 locale is not installed.
+  }
+}
+#endif
 
 // CLI entry point. Delegates runtime orchestration to AppController.
 int main(int argc, char** argv) {
+#if defined(_WIN32)
+  InitializeWindowsUtf8Console();
+#endif
+
   if (argc < 2) {
-    std::cerr << "Usage: vocalplayer <audio-file-or-directory>" << std::endl;
+    std::cerr << "Usage: vocalplayer <audio-file-or-directory>\n";
     return 1;
   }
 

@@ -89,6 +89,16 @@ CMake automatically fetches these third-party libraries:
 - `kissfft`
 - `FTXUI`
 
+### Windows Notes
+
+- For correct CJK metadata rendering, use a UTF-8-capable terminal and font
+  (for example: Windows Terminal with a CJK font).
+- CMake now tries TagLib in this order:
+  1. `find_package(TagLib CONFIG)`
+  2. `pkg-config taglib` fallback
+- If TagLib is not found, the app still runs but falls back to filename title
+  and `Unknown Artist`.
+
 ### Build
 
 ```bash

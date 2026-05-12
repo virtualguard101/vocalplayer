@@ -43,7 +43,7 @@ Press `q` in the TUI to quit the current session.
 - `k`: move playlist selection up
 - `m`: cycle visualization layout mode
 - `v`: toggle waveform style (`Raw` / `Envelope`)
-- `t`: cycle built-in theme (`Default` / `Neon` / `Mono`)
+- `t`: cycle built-in theme (`Default` / `Miku` / `Teto`)
 - Mouse wheel: scroll playlist viewport
 - Left click on a playlist item: select that track only
 - `Enter`: play the currently selected track

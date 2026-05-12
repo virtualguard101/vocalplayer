@@ -54,6 +54,7 @@ int AppController::Run(const std::string& input_path) {
     // Generate the display names for UI.
     std::vector<std::string> track_names = BuildTrackDisplayNames(playlist);
     const int total_tracks = static_cast<int>(playlist.size());
+    UiSessionState ui_session_state;
 
     int current_index = 0;
     // Playback loop for each track in the playlist.
@@ -165,7 +166,8 @@ int AppController::Run(const std::string& input_path) {
             [&] {
               PlaybackState state = audio_engine_.GetPlaybackState();
               return state.is_finished || switch_requested.load();
-            });
+            },
+            &ui_session_state);
       } catch (const std::exception& ex) {
         audio_engine_.Stop();
         std::cerr << "Warning: skip track due to error: " << ex.what()

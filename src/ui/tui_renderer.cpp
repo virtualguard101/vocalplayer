@@ -246,7 +246,7 @@ void TuiRenderer::Run(
     const std::function<PlaylistViewModel()>& playlist_provider,
     const std::function<void(UiIntent)>& on_intent,
     const std::function<void(int)>& on_selection_changed,
-    const std::function<bool()>& should_stop) {
+    const std::function<bool()>& should_stop, UiSessionState* session_state) {
   VisualFrame latest_frame = frame_provider();
   PlaylistViewModel latest_playlist = playlist_provider();
   std::atomic<bool> keep_running = true;
@@ -254,6 +254,11 @@ void TuiRenderer::Run(
   ThemeId active_theme_id = ThemeId::kDefault;
   VisualMode active_visual_mode = VisualMode::kOverview;
   bool use_envelope_waveform = false;
+  if (session_state != nullptr) {
+    active_theme_id = session_state->theme_id;
+    active_visual_mode = session_state->visual_mode;
+    use_envelope_waveform = session_state->use_envelope_waveform;
+  }
 
   auto screen = ScreenInteractive::Fullscreen();
   int track_count = static_cast<int>(latest_playlist.tracks.size());
@@ -538,6 +543,11 @@ void TuiRenderer::Run(
   keep_running.store(false);
   if (refresh_thread.joinable()) {
     refresh_thread.join();
+  }
+  if (session_state != nullptr) {
+    session_state->theme_id = active_theme_id;
+    session_state->visual_mode = active_visual_mode;
+    session_state->use_envelope_waveform = use_envelope_waveform;
   }
 }
 

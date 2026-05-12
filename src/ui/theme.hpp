@@ -13,8 +13,8 @@ namespace vocalplayer {
  */
 enum class ThemeId {
   kDefault,
-  kNeon,
-  kMono,
+  kMiku,
+  kTeto,
 };
 
 /**
@@ -40,34 +40,34 @@ struct Theme {
  */
 inline const Theme& GetBuiltinTheme(ThemeId theme_id) {
   static const Theme kDefaultTheme{};
-  static const Theme kNeonTheme{
-      .title_color = ftxui::Color::BlueLight,
+  static const Theme kMikuTheme{
+      .title_color = ftxui::Color::RGB(57, 197, 187),
       .text_color = ftxui::Color::White,
-      .accent_color = ftxui::Color::CyanLight,
-      .spectrum_color = ftxui::Color::BlueLight,
-      .peak_color = ftxui::Color::YellowLight,
-      .waveform_color = ftxui::Color::MagentaLight,
-      .meter_color = ftxui::Color::GreenLight,
-      .warning_color = ftxui::Color::YellowLight,
-      .border_color = ftxui::Color::BlueLight,
+      .accent_color = ftxui::Color::RGB(137, 248, 226),
+      .spectrum_color = ftxui::Color::RGB(57, 197, 187),
+      .peak_color = ftxui::Color::RGB(223, 255, 246),
+      .waveform_color = ftxui::Color::RGB(0, 221, 192),
+      .meter_color = ftxui::Color::RGB(98, 255, 210),
+      .warning_color = ftxui::Color::RGB(255, 220, 122),
+      .border_color = ftxui::Color::RGB(57, 197, 187),
   };
-  static const Theme kMonoTheme{
-      .title_color = ftxui::Color::White,
-      .text_color = ftxui::Color::GrayLight,
-      .accent_color = ftxui::Color::White,
-      .spectrum_color = ftxui::Color::GrayLight,
-      .peak_color = ftxui::Color::White,
-      .waveform_color = ftxui::Color::GrayDark,
-      .meter_color = ftxui::Color::White,
-      .warning_color = ftxui::Color::GrayLight,
-      .border_color = ftxui::Color::GrayLight,
+  static const Theme kTetoTheme{
+      .title_color = ftxui::Color::RGB(234, 84, 141),
+      .text_color = ftxui::Color::White,
+      .accent_color = ftxui::Color::RGB(255, 165, 198),
+      .spectrum_color = ftxui::Color::RGB(234, 84, 141),
+      .peak_color = ftxui::Color::RGB(255, 218, 232),
+      .waveform_color = ftxui::Color::RGB(255, 109, 165),
+      .meter_color = ftxui::Color::RGB(255, 129, 179),
+      .warning_color = ftxui::Color::RGB(255, 212, 92),
+      .border_color = ftxui::Color::RGB(234, 84, 141),
   };
 
   switch (theme_id) {
-    case ThemeId::kNeon:
-      return kNeonTheme;
-    case ThemeId::kMono:
-      return kMonoTheme;
+    case ThemeId::kMiku:
+      return kMikuTheme;
+    case ThemeId::kTeto:
+      return kTetoTheme;
     case ThemeId::kDefault:
     default:
       return kDefaultTheme;
@@ -83,10 +83,10 @@ inline const Theme& GetBuiltinTheme(ThemeId theme_id) {
 inline ThemeId NextThemeId(ThemeId current) {
   switch (current) {
     case ThemeId::kDefault:
-      return ThemeId::kNeon;
-    case ThemeId::kNeon:
-      return ThemeId::kMono;
-    case ThemeId::kMono:
+      return ThemeId::kMiku;
+    case ThemeId::kMiku:
+      return ThemeId::kTeto;
+    case ThemeId::kTeto:
     default:
       return ThemeId::kDefault;
   }
@@ -100,10 +100,10 @@ inline ThemeId NextThemeId(ThemeId current) {
  */
 inline std::string GetThemeDisplayName(ThemeId theme_id) {
   switch (theme_id) {
-    case ThemeId::kNeon:
-      return "Neon";
-    case ThemeId::kMono:
-      return "Mono";
+    case ThemeId::kMiku:
+      return "Miku";
+    case ThemeId::kTeto:
+      return "Teto";
     case ThemeId::kDefault:
     default:
       return "Default";

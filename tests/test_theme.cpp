@@ -13,19 +13,19 @@ int main() {
   using vocalplayer::ThemeId;
 
   const Theme& default_theme = GetBuiltinTheme(ThemeId::kDefault);
-  const Theme& neon_theme = GetBuiltinTheme(ThemeId::kNeon);
-  const Theme& mono_theme = GetBuiltinTheme(ThemeId::kMono);
+  const Theme& miku_theme = GetBuiltinTheme(ThemeId::kMiku);
+  const Theme& teto_theme = GetBuiltinTheme(ThemeId::kTeto);
 
   assert(GetThemeDisplayName(ThemeId::kDefault) == "Default");
-  assert(GetThemeDisplayName(ThemeId::kNeon) == "Neon");
-  assert(GetThemeDisplayName(ThemeId::kMono) == "Mono");
+  assert(GetThemeDisplayName(ThemeId::kMiku) == "Miku");
+  assert(GetThemeDisplayName(ThemeId::kTeto) == "Teto");
 
-  assert(NextThemeId(ThemeId::kDefault) == ThemeId::kNeon);
-  assert(NextThemeId(ThemeId::kNeon) == ThemeId::kMono);
-  assert(NextThemeId(ThemeId::kMono) == ThemeId::kDefault);
+  assert(NextThemeId(ThemeId::kDefault) == ThemeId::kMiku);
+  assert(NextThemeId(ThemeId::kMiku) == ThemeId::kTeto);
+  assert(NextThemeId(ThemeId::kTeto) == ThemeId::kDefault);
 
-  assert(default_theme.title_color != neon_theme.title_color);
-  assert(mono_theme.border_color != neon_theme.border_color);
+  assert(default_theme.title_color != miku_theme.title_color);
+  assert(teto_theme.border_color != miku_theme.border_color);
 
   std::optional<Theme> maybe_theme = LoadThemeFromConfig("theme.toml");
   assert(!maybe_theme.has_value());

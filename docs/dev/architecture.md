@@ -9,8 +9,10 @@ Implemented scope:
 
 - File or directory input.
 - Decoding + playback via miniaudio.
-- Real-time spectrum and waveform rendering in terminal.
+- Real-time spectrum (with peak-hold) and dual waveform rendering in terminal.
+- Meter panels for RMS/Peak and low/mid/high frequency band energy.
 - Playlist interactions (`h/l`, `j/k`, `Space`, `Enter`, mouse select/scroll).
+- View-mode switching (`m`), waveform style toggle (`v`), and theme cycling (`t`).
 - Optional metadata enrichment via TagLib.
 
 ## Component Diagram
@@ -53,9 +55,10 @@ flowchart LR
   - Streams PCM to output device and tracks playback cursor/state.
   - Exposes pause/resume and analysis window extraction.
 - `SpectrumAnalyzer`
-  - Converts mono windows into spectrum bars and waveform points.
+  - Converts mono windows into spectrum bars, peak-hold hints, waveform points,
+    envelope waveform points, and meter values.
 - `TuiRenderer`
-  - Renders the terminal view.
+  - Renders panelized terminal layout (header/visual area/playlist/footer).
   - Maps key/mouse input into `UiIntent` events.
 
 ## Interface Inventory
@@ -72,10 +75,14 @@ flowchart LR
 - Analysis interface
   - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
   - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
+  - `std::vector<float> SpectrumAnalyzer::ComputeWaveformEnvelope(...) const`
+  - `AudioLevels SpectrumAnalyzer::ComputeLevels(...) const`
+  - `std::vector<float> SpectrumAnalyzer::ComputeBandEnergies(...) const`
 - UI interfaces
   - `void TuiRenderer::Run(...)`
   - `UiIntent` enum for playback/navigation intents
   - `Keybindings` + `DefaultKeybindings()` for configurable key mapping
+  - `ThemeId` / `Theme` for runtime built-in theme palettes
 
 ## Overall Architecture Diagram
 
@@ -210,7 +217,8 @@ flowchart LR
 - `DecodedTrack`: interleaved float PCM plus stream format.
 - `TrackInfo`: source and display metadata for active track.
 - `PlaybackState`: elapsed time, duration, and runtime flags.
-- `VisualFrame`: complete UI tick payload.
+- `VisualFrame`: complete UI tick payload, including spectrum peaks, envelope
+  waveform, RMS/Peak levels, band energies, and preferred visual mode.
 
 ## Planned Evolution
 

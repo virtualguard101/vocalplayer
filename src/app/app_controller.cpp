@@ -20,6 +20,11 @@
 namespace vocalplayer {
 namespace {
 
+constexpr uint32_t kAnalysisWindowSize = 2048;
+constexpr uint32_t kWaveformPointCount = 96;
+constexpr uint32_t kBandEnergyCount = 3;
+constexpr float kPeakDecayPerFrame = 0.035f;
+
 // Build display-friendly short names from absolute playlist paths.
 std::vector<std::string> BuildTrackDisplayNames(
     const std::vector<std::string>& playlist) {
@@ -49,6 +54,7 @@ int AppController::Run(const std::string& input_path) {
     // Generate the display names for UI.
     std::vector<std::string> track_names = BuildTrackDisplayNames(playlist);
     const int total_tracks = static_cast<int>(playlist.size());
+    UiSessionState ui_session_state;
 
     int current_index = 0;
     // Playback loop for each track in the playlist.
@@ -61,6 +67,7 @@ int AppController::Run(const std::string& input_path) {
       std::atomic<int> requested_index{current_index};
       std::atomic<bool> switch_requested{false};
       std::atomic<bool> exit_requested{false};
+      std::vector<float> spectrum_peaks(48, 0.0f);
 
       // Singal track playback process
       try {
@@ -88,9 +95,29 @@ int AppController::Run(const std::string& input_path) {
               frame.track_info = audio_engine_.GetTrackInfo();
               frame.playback_state = audio_engine_.GetPlaybackState();
               std::vector<float> window =
-                  audio_engine_.GetRecentMonoWindow(2048);
+                  audio_engine_.GetRecentMonoWindow(kAnalysisWindowSize);
               frame.spectrum_bars = analyzer_.ComputeBars(window);
-              frame.waveform_points = analyzer_.ComputeWaveform(window, 96);
+              if (spectrum_peaks.size() != frame.spectrum_bars.size()) {
+                spectrum_peaks.assign(frame.spectrum_bars.size(), 0.0f);
+              }
+              for (size_t i = 0; i < frame.spectrum_bars.size(); ++i) {
+                const float decayed_peak =
+                    std::max(0.0f, spectrum_peaks[i] - kPeakDecayPerFrame);
+                spectrum_peaks[i] =
+                    std::max(frame.spectrum_bars[i], decayed_peak);
+              }
+              frame.spectrum_peak_bars = spectrum_peaks;
+              frame.waveform_points =
+                  analyzer_.ComputeWaveform(window, kWaveformPointCount);
+              frame.waveform_envelope_points =
+                  analyzer_.ComputeWaveformEnvelope(window,
+                                                    kWaveformPointCount);
+              const AudioLevels levels = analyzer_.ComputeLevels(window);
+              frame.rms_level = levels.rms_level;
+              frame.peak_level = levels.peak_level;
+              frame.band_energies =
+                  analyzer_.ComputeBandEnergies(window, kBandEnergyCount);
+              frame.visual_mode = VisualMode::kOverview;
               return frame;
             },
             // Build the playlist view model (tracks/current/selection).
@@ -139,7 +166,8 @@ int AppController::Run(const std::string& input_path) {
             [&] {
               PlaybackState state = audio_engine_.GetPlaybackState();
               return state.is_finished || switch_requested.load();
-            });
+            },
+            &ui_session_state);
       } catch (const std::exception& ex) {
         audio_engine_.Stop();
         std::cerr << "Warning: skip track due to error: " << ex.what()

@@ -3,7 +3,7 @@ description: VocalPlayer iteration standards (first-cycle learnings)
 alwaysApply: true
 ---
 
-# VocalPlayer General Rules
+# vocalplayer General Rules
 
 ## 1) Requirements and Planning
 
@@ -13,6 +13,8 @@ alwaysApply: true
   mode before implementation.
 - For UI interaction work, define an intent layer (`UiIntent`) before wiring
   rendering and control logic to avoid tight coupling.
+- When iterating, focus on iteration plans instead of overly focusing on longterm / debatable plans, unless they are beneficial
+  to the current iteration plan to be executed.
 
 ## 2) Implementation Order (Recommended)
 

@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -21,6 +24,7 @@
 #include "ftxui/component/mouse.hpp"
 #include "ftxui/component/screen_interactive.hpp"
 #include "ftxui/dom/elements.hpp"
+#include "ui/theme.hpp"
 
 namespace vocalplayer {
 namespace {
@@ -28,38 +32,94 @@ namespace {
 using namespace ftxui;  // NOLINT
 
 constexpr int kPlaylistVisibleRows = 10;
-constexpr int kPlaylistStartY = 16;
+constexpr int kSpectrumCanvasHeight = 32;
+constexpr int kWaveformCanvasHeight = 20;
+constexpr int kMeterGaugeWidth = 18;
+constexpr float kSpectrumPeakThreshold = 0.03f;
 
-// Build a one-column spectrum bar using repeated characters.
-std::string BuildBar(float value, int height) {
-  int filled = static_cast<int>(value * static_cast<float>(height));
-  return std::string(std::max(filled, 0), '#');
+// Format seconds as mm:ss for compact top status line.
+std::string FormatTime(double total_seconds) {
+  const int rounded = std::max(0, static_cast<int>(std::round(total_seconds)));
+  const int minutes = rounded / 60;
+  const int seconds = rounded % 60;
+  std::ostringstream oss;
+  oss << std::setfill('0') << std::setw(2) << minutes << ":" << std::setw(2)
+      << seconds;
+  return oss.str();
 }
 
-// Render normalized spectrum bars into a fixed-height row block.
-Element RenderSpectrum(const std::vector<float>& bars) {
-  std::vector<Element> cols;
-  cols.reserve(bars.size());
-  constexpr int kMaxBarHeight = 8;
-  for (float value : bars) {
-    cols.push_back(vbox({
-        filler(),
-        text(BuildBar(value, kMaxBarHeight)) | color(Color::Cyan),
-    }));
+// Render normalized spectrum bars and peak-hold markers.
+Element RenderSpectrum(const std::vector<float>& bars,
+                       const std::vector<float>& peaks, const Theme& theme) {
+  if (bars.empty()) {
+    return text("(no spectrum data)");
   }
-  return hbox(std::move(cols)) | size(HEIGHT, EQUAL, kMaxBarHeight);
+  const int canvas_width = static_cast<int>(bars.size() * 2);
+  return canvas(
+      canvas_width, kSpectrumCanvasHeight,
+      [bars, peaks, theme, canvas_width](Canvas& c) {
+        const int baseline = kSpectrumCanvasHeight - 1;
+        for (size_t idx = 0; idx < bars.size(); ++idx) {
+          const int bar_x = static_cast<int>(idx * 2);
+          const float value = std::clamp(bars[idx], 0.0F, 1.0F);
+          const float peak_value =
+              idx < peaks.size() ? std::clamp(peaks[idx], 0.0F, 1.0F) : value;
+          const int filled_height = static_cast<int>(
+              value * static_cast<float>(kSpectrumCanvasHeight - 1));
+          const int bar_top = baseline - filled_height;
+          c.DrawPointLine(bar_x, baseline, bar_x, bar_top,
+                          theme.spectrum_color);
+          if (bar_x + 1 < canvas_width) {
+            c.DrawPointLine(bar_x + 1, baseline, bar_x + 1, bar_top,
+                            theme.spectrum_color);
+          }
+
+          const bool should_draw_peak =
+              peak_value > value + kSpectrumPeakThreshold && peak_value > 0.0F;
+          if (should_draw_peak) {
+            const int peak_y =
+                baseline -
+                static_cast<int>(peak_value *
+                                 static_cast<float>(kSpectrumCanvasHeight - 1));
+            c.DrawPoint(bar_x, peak_y, true, theme.peak_color);
+            if (bar_x + 1 < canvas_width) {
+              c.DrawPoint(bar_x + 1, peak_y, true, theme.peak_color);
+            }
+          }
+        }
+      });
 }
 
-// Render waveform points as lightweight ASCII intensity glyphs.
-Element RenderWaveform(const std::vector<float>& wave) {
-  std::vector<Element> points;
-  points.reserve(wave.size());
-  for (float v : wave) {
-    const int level = static_cast<int>(v * 7.0f);
-    const char glyph = " .:-=+*#"[std::clamp(level, 0, 7)];
-    points.push_back(text(std::string(1, glyph)) | color(Color::Magenta));
+// Render waveform points as a connected canvas line graph.
+Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
+  if (wave.empty()) {
+    return text("(no waveform data)");
   }
-  return hbox(std::move(points));
+  const int canvas_width = static_cast<int>(wave.size());
+  return canvas(
+      canvas_width, kWaveformCanvasHeight,
+      [wave, theme, canvas_width](Canvas& c) {
+        const int max_y = kWaveformCanvasHeight - 1;
+        int previous_x = 0;
+        int previous_y = max_y;
+        for (size_t idx = 0; idx < wave.size(); ++idx) {
+          const int current_x = static_cast<int>(idx);
+          const float value = std::clamp(wave[idx], 0.0F, 1.0F);
+          const int current_y =
+              static_cast<int>((1.0F - value) * static_cast<float>(max_y));
+          if (idx == 0) {
+            c.DrawPoint(current_x, current_y, true, theme.waveform_color);
+          } else {
+            c.DrawPointLine(previous_x, previous_y, current_x, current_y,
+                            theme.waveform_color);
+          }
+          previous_x = current_x;
+          previous_y = current_y;
+        }
+        if (canvas_width > 0) {
+          c.DrawPointLine(0, max_y, canvas_width - 1, max_y, Color::GrayDark);
+        }
+      });
 }
 
 // Clamp playlist viewport start offset into valid range.
@@ -117,27 +177,65 @@ Element RenderPlaylist(const PlaylistViewModel& playlist, int view_offset,
 }
 
 // Render highlighted selection status line for pending vs live target.
-Element RenderSelectionStatus(const PlaylistViewModel& playlist) {
+Element RenderSelectionStatus(const PlaylistViewModel& playlist,
+                              const Theme& theme) {
   if (playlist.tracks.empty()) {
-    return text("Selected: none (playlist is empty)") | color(Color::GrayDark);
+    return text("Selected: none (playlist is empty)") |
+           color(theme.warning_color);
   }
 
   const bool is_pending =
       playlist.selected_track_index != playlist.current_track_index;
   const std::string status_label = is_pending ? "PENDING" : "LIVE";
-  const Color status_color = is_pending ? Color::Yellow : Color::Green;
+  const Color status_color =
+      is_pending ? theme.warning_color : theme.meter_color;
   const std::string selected_text =
       std::to_string(playlist.selected_track_index + 1) + "/" +
       std::to_string(playlist.tracks.size());
 
   return hbox({
       text("Selected "),
-      text(selected_text) | bold | color(Color::Cyan),
+      text(selected_text) | bold | color(theme.accent_color),
       text("  "),
       text("[" + status_label + "]") | bold | color(status_color),
       text("  "),
       text("(Press Enter to play)"),
   });
+}
+
+// Cycle layout mode for the main visualization region.
+VisualMode NextVisualMode(VisualMode mode) {
+  switch (mode) {
+    case VisualMode::kOverview:
+      return VisualMode::kSpectrumFocus;
+    case VisualMode::kSpectrumFocus:
+      return VisualMode::kWaveformFocus;
+    case VisualMode::kWaveformFocus:
+      return VisualMode::kMeterFocus;
+    case VisualMode::kMeterFocus:
+    default:
+      return VisualMode::kOverview;
+  }
+}
+
+// Build a concise mode label shown in footer/status.
+std::string VisualModeName(VisualMode mode) {
+  switch (mode) {
+    case VisualMode::kSpectrumFocus:
+      return "Spectrum";
+    case VisualMode::kWaveformFocus:
+      return "Waveform";
+    case VisualMode::kMeterFocus:
+      return "Meters";
+    case VisualMode::kOverview:
+    default:
+      return "Overview";
+  }
+}
+
+// Detect whether a mouse event occurred inside the given box.
+bool IsInsideBox(const Box& box, int x, int y) {
+  return x >= box.x_min && x <= box.x_max && y >= box.y_min && y <= box.y_max;
 }
 
 }  // namespace
@@ -148,11 +246,19 @@ void TuiRenderer::Run(
     const std::function<PlaylistViewModel()>& playlist_provider,
     const std::function<void(UiIntent)>& on_intent,
     const std::function<void(int)>& on_selection_changed,
-    const std::function<bool()>& should_stop) {
+    const std::function<bool()>& should_stop, UiSessionState* session_state) {
   VisualFrame latest_frame = frame_provider();
   PlaylistViewModel latest_playlist = playlist_provider();
   std::atomic<bool> keep_running = true;
   Keybindings keybindings = DefaultKeybindings();
+  ThemeId active_theme_id = ThemeId::kDefault;
+  VisualMode active_visual_mode = VisualMode::kOverview;
+  bool use_envelope_waveform = false;
+  if (session_state != nullptr) {
+    active_theme_id = session_state->theme_id;
+    active_visual_mode = session_state->visual_mode;
+    use_envelope_waveform = session_state->use_envelope_waveform;
+  }
 
   auto screen = ScreenInteractive::Fullscreen();
   int track_count = static_cast<int>(latest_playlist.tracks.size());
@@ -167,6 +273,7 @@ void TuiRenderer::Run(
       ClampOffset(initial_offset, track_count, kPlaylistVisibleRows);
   std::atomic<int> selected_index{initial_selected};
   std::atomic<int> view_offset{initial_offset};
+  Box playlist_rows_box;
 
   auto select_delta = [&](int delta) {
     if (latest_playlist.tracks.empty()) {
@@ -198,38 +305,117 @@ void TuiRenderer::Run(
   };
 
   auto component = Renderer([&] {
+    const Theme& theme = GetBuiltinTheme(active_theme_id);
     const PlaybackState& state = latest_frame.playback_state;
     float ratio = 0.0f;
     if (state.duration_sec > 0.0) {
       ratio = static_cast<float>(state.elapsed_sec / state.duration_sec);
     }
 
+    const std::vector<float>& wave_source =
+        use_envelope_waveform ? latest_frame.waveform_envelope_points
+                              : latest_frame.waveform_points;
+    Element spectrum_panel =
+        window(text("Spectrum") | color(theme.title_color),
+               RenderSpectrum(latest_frame.spectrum_bars,
+                              latest_frame.spectrum_peak_bars, theme));
+    Element waveform_panel = window(
+        text(use_envelope_waveform ? "Waveform (Envelope)" : "Waveform (Raw)") |
+            color(theme.title_color),
+        RenderWaveform(wave_source, theme));
+    Element meters_panel = window(
+        text("Meters") | color(theme.title_color),
+        vbox({
+            hbox({text("RMS  ") | color(theme.text_color),
+                  gauge(latest_frame.rms_level) | color(theme.meter_color) |
+                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
+            hbox({text("Peak ") | color(theme.text_color),
+                  gauge(latest_frame.peak_level) | color(theme.warning_color) |
+                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
+            separator(),
+            text("Bands") | color(theme.accent_color),
+            hbox({text("Low  ") | color(theme.text_color),
+                  gauge(latest_frame.band_energies.size() > 0
+                            ? latest_frame.band_energies[0]
+                            : 0.0F) |
+                      color(theme.spectrum_color) |
+                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
+            hbox({text("Mid  ") | color(theme.text_color),
+                  gauge(latest_frame.band_energies.size() > 1
+                            ? latest_frame.band_energies[1]
+                            : 0.0F) |
+                      color(theme.accent_color) |
+                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
+            hbox({text("High ") | color(theme.text_color),
+                  gauge(latest_frame.band_energies.size() > 2
+                            ? latest_frame.band_energies[2]
+                            : 0.0F) |
+                      color(theme.peak_color) |
+                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
+        }));
+
+    Element visual_area;
+    switch (active_visual_mode) {
+      case VisualMode::kSpectrumFocus:
+        visual_area = hbox({spectrum_panel | flex, meters_panel | flex});
+        break;
+      case VisualMode::kWaveformFocus:
+        visual_area = hbox({waveform_panel | flex, meters_panel | flex});
+        break;
+      case VisualMode::kMeterFocus:
+        visual_area = hbox({meters_panel | flex, spectrum_panel | flex});
+        break;
+      case VisualMode::kOverview:
+      default:
+        visual_area = hbox({spectrum_panel | flex, waveform_panel | flex,
+                            meters_panel | flex});
+        break;
+    }
+
+    Element playlist_rows = RenderPlaylist(latest_playlist, view_offset.load(),
+                                           kPlaylistVisibleRows) |
+                            reflect(playlist_rows_box);
+    Element playlist_panel =
+        window(text("Playlist") | color(theme.title_color),
+               vbox({
+                   text("h/l prev/next  Space pause  j/k select  Enter play") |
+                       color(theme.text_color),
+                   RenderSelectionStatus(latest_playlist, theme),
+                   separator(),
+                   playlist_rows,
+               }));
+
+    Element header_panel =
+        window(hcenter(text("Now Playing") | color(theme.title_color)),
+               vbox({
+                   hcenter(text(latest_frame.track_info.title) |
+                           color(theme.text_color)),
+                   hcenter(text(latest_frame.track_info.artist) |
+                           color(theme.text_color)),
+                   hcenter(text(state.is_playing ? "Playing" : "Paused") |
+                           color(theme.accent_color)),
+                   hcenter(text(BuildProgressBar(ratio, 36)) |
+                           color(theme.text_color)),
+                   hcenter(text(FormatTime(state.elapsed_sec) + " / " +
+                                FormatTime(state.duration_sec)) |
+                           color(theme.text_color)),
+               }));
+
+    Element footer =
+        text("Mode[m]: " + VisualModeName(active_visual_mode) + " | Wave[v]: " +
+             std::string(use_envelope_waveform ? "Envelope" : "Raw") +
+             " | Theme[t]: " + GetThemeDisplayName(active_theme_id) +
+             " | q quit") |
+        color(theme.accent_color);
+
     return vbox({
-               text("VocalPlayer MVP") | bold,
-               separator(),
-               text("Title: " + latest_frame.track_info.title),
-               text("Artist: " + latest_frame.track_info.artist),
-               text(std::string("State: ") +
-                    (state.is_playing ? "Playing" : "Paused")),
-               text("Progress: " + BuildProgressBar(ratio, 40)),
-               text("Time: " + std::to_string(state.elapsed_sec) + " / " +
-                    std::to_string(state.duration_sec) + " sec"),
-               separator(),
-               text("Spectrum"),
-               RenderSpectrum(latest_frame.spectrum_bars),
-               separator(),
-               text("Waveform"),
-               RenderWaveform(latest_frame.waveform_points),
-               separator(),
-               text("Playlist (h/l prev/next, Space pause/resume, j/k move, "
-                    "click select, Enter play)"),
-               RenderSelectionStatus(latest_playlist),
-               RenderPlaylist(latest_playlist, view_offset.load(),
-                              kPlaylistVisibleRows),
-               separator(),
-               text("Press q to quit."),
+               hcenter(text("vocalplayer") | bold | color(theme.title_color)),
+               header_panel,
+               visual_area,
+               playlist_panel,
+               footer,
            }) |
-           border;
+           border | color(theme.border_color);
   });
   component |= CatchEvent([&](Event event) {
     if (event == Event::Character(keybindings.quit)) {
@@ -262,6 +448,18 @@ void TuiRenderer::Run(
       select_delta(1);
       return true;
     }
+    if (event == Event::Character(keybindings.cycle_visual_mode)) {
+      active_visual_mode = NextVisualMode(active_visual_mode);
+      return true;
+    }
+    if (event == Event::Character(keybindings.toggle_waveform_style)) {
+      use_envelope_waveform = !use_envelope_waveform;
+      return true;
+    }
+    if (event == Event::Character(keybindings.cycle_theme)) {
+      active_theme_id = NextThemeId(active_theme_id);
+      return true;
+    }
     if (event == Event::Return) {
       play_selected();
       return true;
@@ -285,7 +483,10 @@ void TuiRenderer::Run(
         return true;
       }
       if (mouse.button == Mouse::Left && mouse.motion == Mouse::Released) {
-        int local_row = mouse.y - kPlaylistStartY;
+        if (!IsInsideBox(playlist_rows_box, mouse.x, mouse.y)) {
+          return false;
+        }
+        int local_row = mouse.y - playlist_rows_box.y_min;
         int track_count = static_cast<int>(latest_playlist.tracks.size());
         int offset = view_offset.load();
         int visible_count =
@@ -342,6 +543,11 @@ void TuiRenderer::Run(
   keep_running.store(false);
   if (refresh_thread.joinable()) {
     refresh_thread.join();
+  }
+  if (session_state != nullptr) {
+    session_state->theme_id = active_theme_id;
+    session_state->visual_mode = active_visual_mode;
+    session_state->use_envelope_waveform = use_envelope_waveform;
   }
 }
 

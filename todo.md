@@ -2,7 +2,7 @@
 
 ## Iteration Plans
 
-- v0.1.0: MVP 实现（Almost by Cursor）
+- [x] v0.1.*: MVP 实现（Almost by Cursor）
 
   - [x] 实现最小可播放链路（解码+播放+时间进度）
 
@@ -14,9 +14,31 @@
 
 - [x] Code Review
 
-- v0.2.0: 频谱/波形可视化UI增强
+- [x] v0.2.*: 频谱/波形可视化UI增强
 
-## Project Engineering Practices:
+  - [x] 增强频谱/波形可视化UI（增加颜色、动画、交互等）
+
+  - [x] 引入颜色主题系统（默认、预留用户自定义配置接口）
+
+  - [x] 引入更丰富的可视化效果（如波形、频谱、波形图、频谱图等）
+
+  - [x] 引入音频信息仪表（RMS、Peak、低/中/高频段能量）
+
+  - [x] 引入播放器UI会话缓存机制
+
+- [ ] v0.3.*: 引入字符艺术动态背景引擎
+  
+  - [ ] 引入UTF-8/ASCII字符艺术（主推泛vocaloid主题：Miku、Gumi、IA、Teto等）
+
+  - [ ] 参考开源项目实现播放时动态字符艺术背景引擎（实现图片/视频等渲染<实时渲染还是预渲染待定>，支持从工作目录读取视频并进行解码，支持用户自定义视频源，默认携带一个teto主题和一个miku主题的ascii动态背景）
+
+- [ ] v0.4.*: 引入ncmdump API；实现自动读取网易云本地音乐库
+
+- [ ] v1.0.*: 
+
+  - [ ] 将列表播放会话逻辑重构为单次UI会话，切换播放曲目时不退出UI循环，仅触发控制器换曲
+
+## Project Engineering Practices
 
 - [x] Formatted code with clang-format (in `v0.1.0`)
 
@@ -26,7 +48,15 @@
 
 - [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline (in `v0.1.1`)
 
-## Longterm Plan
+- [ ] Add xmake build config support
+
+## Longterm / Debatable Plan
+
+- [ ] 用户自定义颜色主题系统实现
+
+- [ ] 音频解码层 FFmpeg API 并行调用实现
+
+- [ ] Rust Version: Rust并行实现
 
 - [ ] Analyzer Backend 抽象：将现有 `SpectrumAnalyzer` 拆分为前端调度层 + 后端接口（`IAnalyzerBackend`），支持 CPU/CUDA 双实现。
 

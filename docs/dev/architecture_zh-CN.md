@@ -9,9 +9,11 @@
 
 - 输入：支持单个音频文件或音频目录。
 - 播放：通过 miniaudio 执行本地解码缓冲播放。
-- 可视化：通过 FTXUI 实现实时频谱柱与波形渲染。
+- 可视化：通过 FTXUI 实现频谱柱（含峰值保持）与双模式波形渲染。
+- 仪表：支持 RMS/Peak 与低中高频段能量显示。
 - 元数据：优先通过 TagLib 读取标题与艺术家（可选），并提供回退策略。
 - 交互：支持 `h/l`、`j/k`、`Space`、`Enter` 及鼠标选择/滚轮滚动。
+- 模式：支持 `m` 切换可视化布局、`v` 切换波形样式、`t` 切换主题。
 
 ## 组件图
 
@@ -140,9 +142,9 @@ flowchart TB
   - 驱动音频输出设备并维护播放游标/状态。
   - 提供暂停恢复与分析窗口提取能力。
 - `SpectrumAnalyzer`
-  - 将单声道窗口转换为频谱柱与波形点。
+  - 将单声道窗口转换为频谱柱、峰值保持提示、波形点、包络波形和仪表指标。
 - `TuiRenderer`
-  - 渲染终端界面。
+  - 以面板化布局渲染终端界面（顶栏/主可视化区/播放列表/底栏）。
   - 将键鼠输入转换为 `UiIntent`。
 
 ## 接口清单
@@ -159,10 +161,14 @@ flowchart TB
 - 分析层接口
   - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
   - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
+  - `std::vector<float> SpectrumAnalyzer::ComputeWaveformEnvelope(...) const`
+  - `AudioLevels SpectrumAnalyzer::ComputeLevels(...) const`
+  - `std::vector<float> SpectrumAnalyzer::ComputeBandEnergies(...) const`
 - 表现层接口
   - `void TuiRenderer::Run(...)`
   - `UiIntent`（播放与导航意图枚举）
   - `Keybindings` + `DefaultKeybindings()`（键位映射入口）
+  - `ThemeId` / `Theme`（内置主题与配色约定）
 
 ## 数据流图
 
@@ -206,7 +212,7 @@ flowchart LR
 - `DecodedTrack`：交错存储的浮点采样与流格式信息。
 - `TrackInfo`：来源路径、标题、艺术家、时长和采样相关元信息。
 - `PlaybackState`：已播放时间、总时长及运行态标记。
-- `VisualFrame`：每个刷新周期生成的 UI 只读快照。
+- `VisualFrame`：每个刷新周期生成的 UI 只读快照，包含频谱峰值、包络波形、RMS/Peak 和频段能量等扩展字段。
 
 这种“数据契约优先”的设计，使后续迁移到 Rust 时可以在保持边界稳定的前提下，
 替换具体模块实现。

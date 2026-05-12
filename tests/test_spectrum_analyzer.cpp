@@ -16,9 +16,14 @@ int main() {
   vocalplayer::SpectrumAnalyzer analyzer(2048, 48, 0.85f);
   std::vector<float> bars = analyzer.ComputeBars(signal);
   std::vector<float> waveform = analyzer.ComputeWaveform(signal, 64);
+  std::vector<float> envelope = analyzer.ComputeWaveformEnvelope(signal, 64);
+  vocalplayer::AudioLevels levels = analyzer.ComputeLevels(signal);
+  std::vector<float> band_energies = analyzer.ComputeBandEnergies(signal, 3);
 
   assert(!bars.empty());
   assert(!waveform.empty());
+  assert(!envelope.empty());
+  assert(band_energies.size() == 3);
 
   bool has_energy = false;
   for (float v : bars) {
@@ -29,6 +34,20 @@ int main() {
     }
   }
   assert(has_energy);
+  assert(levels.rms_level >= 0.0f);
+  assert(levels.rms_level <= 1.0f);
+  assert(levels.peak_level >= 0.0f);
+  assert(levels.peak_level <= 1.0f);
+  assert(levels.peak_level >= levels.rms_level);
+
+  for (float value : envelope) {
+    assert(value >= 0.0f);
+    assert(value <= 1.0f);
+  }
+  for (float value : band_energies) {
+    assert(value >= 0.0f);
+    assert(value <= 1.0f);
+  }
 
   return 0;
 }

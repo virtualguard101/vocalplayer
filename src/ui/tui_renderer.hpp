@@ -16,6 +16,7 @@
 
 #include "shared/types.hpp"
 #include "ui/keybindings.hpp"
+#include "ui/theme.hpp"
 
 namespace vocalplayer {
 
@@ -48,6 +49,18 @@ struct PlaylistViewModel {
 };
 
 /**
+ * @brief Cross-track UI session preferences persisted by AppController.
+ */
+struct UiSessionState {
+  /// Active built-in color theme.
+  ThemeId theme_id = ThemeId::kDefault;
+  /// Active visualization layout mode.
+  VisualMode visual_mode = VisualMode::kOverview;
+  /// Whether envelope waveform rendering is enabled.
+  bool use_envelope_waveform = false;
+};
+
+/**
  * @brief Terminal renderer and input event bridge.
  *
  * TuiRenderer renders track/analysis/playlist views and converts keyboard and
@@ -71,7 +84,8 @@ class TuiRenderer {
            const std::function<PlaylistViewModel()>& playlist_provider,
            const std::function<void(UiIntent)>& on_intent,
            const std::function<void(int)>& on_selection_changed,
-           const std::function<bool()>& should_stop);
+           const std::function<bool()>& should_stop,
+           UiSessionState* session_state = nullptr);
 
  private:
   /**

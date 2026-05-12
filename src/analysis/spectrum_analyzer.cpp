@@ -128,4 +128,91 @@ std::vector<float> SpectrumAnalyzer::ComputeWaveform(
   return waveform;
 }
 
+// Build a compact amplitude envelope suitable for low-resolution waveform UI.
+std::vector<float> SpectrumAnalyzer::ComputeWaveformEnvelope(
+    const std::vector<float>& mono_window, uint32_t points) const {
+  std::vector<float> envelope(points, 0.0f);
+  if (mono_window.empty() || points == 0) {
+    return envelope;
+  }
+
+  for (uint32_t i = 0; i < points; ++i) {
+    uint32_t start = (i * static_cast<uint32_t>(mono_window.size())) / points;
+    uint32_t end =
+        ((i + 1) * static_cast<uint32_t>(mono_window.size())) / points;
+    end = std::max(end, start + 1);
+    end = std::min(end, static_cast<uint32_t>(mono_window.size()));
+
+    float sum = 0.0f;
+    for (uint32_t idx = start; idx < end; ++idx) {
+      sum += std::abs(mono_window[idx]);
+    }
+    const float mean_abs = sum / static_cast<float>(end - start);
+    envelope[i] = Clamp01(mean_abs);
+  }
+  return envelope;
+}
+
+// Compute RMS and peak levels from normalized mono samples.
+AudioLevels SpectrumAnalyzer::ComputeLevels(
+    const std::vector<float>& mono_window) const {
+  AudioLevels levels;
+  if (mono_window.empty()) {
+    return levels;
+  }
+
+  float sum_squares = 0.0f;
+  float peak_abs = 0.0f;
+  for (float sample : mono_window) {
+    const float abs_sample = std::abs(sample);
+    peak_abs = std::max(peak_abs, abs_sample);
+    sum_squares += sample * sample;
+  }
+
+  levels.rms_level =
+      Clamp01(std::sqrt(sum_squares / static_cast<float>(mono_window.size())));
+  levels.peak_level = Clamp01(peak_abs);
+  return levels;
+}
+
+// Compute coarse per-band energies from FFT magnitudes.
+std::vector<float> SpectrumAnalyzer::ComputeBandEnergies(
+    const std::vector<float>& mono_window, uint32_t band_count) const {
+  std::vector<float> energies(band_count, 0.0f);
+  if (mono_window.empty() || band_count == 0) {
+    return energies;
+  }
+
+  std::vector<float> padded(fft_size_, 0.0f);
+  uint32_t copy_count = std::min<uint32_t>(mono_window.size(), fft_size_);
+  std::copy_n(mono_window.end() - copy_count, copy_count,
+              padded.end() - copy_count);
+
+  for (uint32_t i = 0; i < fft_size_; ++i) {
+    const float hann =
+        0.5f * (1.0f - std::cos((2.0f * kPi * i) / (fft_size_ - 1)));
+    impl_->input[i].r = padded[i] * hann;
+    impl_->input[i].i = 0.0f;
+  }
+  kiss_fft(impl_->cfg, impl_->input.data(), impl_->output.data());
+
+  const uint32_t nyquist_bins = fft_size_ / 2;
+  for (uint32_t band = 0; band < band_count; ++band) {
+    uint32_t start = (band * nyquist_bins) / band_count;
+    uint32_t end = ((band + 1) * nyquist_bins) / band_count;
+    end = std::max(end, start + 1);
+
+    float magnitude = 0.0f;
+    for (uint32_t bin = start; bin < end; ++bin) {
+      const float real = impl_->output[bin].r;
+      const float imag = impl_->output[bin].i;
+      magnitude += std::sqrt(real * real + imag * imag);
+    }
+
+    magnitude /= static_cast<float>(end - start);
+    energies[band] = Clamp01(std::log1p(magnitude) / 8.0f);
+  }
+  return energies;
+}
+
 }  // namespace vocalplayer

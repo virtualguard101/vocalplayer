@@ -49,6 +49,20 @@ struct PlaybackState {
 };
 
 /**
+ * @brief Renderer layout mode for visualization panels.
+ */
+enum class VisualMode {
+  /// Balanced overview with all major panels visible.
+  kOverview,
+  /// Focus on spectrum rendering.
+  kSpectrumFocus,
+  /// Focus on waveform rendering.
+  kWaveformFocus,
+  /// Focus on meter-style numeric visualization.
+  kMeterFocus,
+};
+
+/**
  * @brief Fully decoded interleaved PCM buffer.
  */
 struct DecodedTrack {
@@ -72,8 +86,20 @@ struct VisualFrame {
   PlaybackState playback_state;
   /// Spectrum bar amplitudes in [0, 1].
   std::vector<float> spectrum_bars;
+  /// Peak-hold spectrum marker values in [0, 1].
+  std::vector<float> spectrum_peak_bars;
   /// Waveform points in [0, 1].
   std::vector<float> waveform_points;
+  /// Envelope waveform points in [0, 1].
+  std::vector<float> waveform_envelope_points;
+  /// Root-mean-square level in [0, 1].
+  float rms_level = 0.0f;
+  /// Peak level in [0, 1].
+  float peak_level = 0.0f;
+  /// Coarse band energies in [0, 1].
+  std::vector<float> band_energies;
+  /// Preferred visualization mode (renderer may override by local user action).
+  VisualMode visual_mode = VisualMode::kOverview;
 };
 
 }  // namespace vocalplayer

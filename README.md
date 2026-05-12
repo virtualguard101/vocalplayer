@@ -10,8 +10,7 @@ A creative C++ CLI music player with real-time rhythm visualization in the termi
 
 </div>
 
-vocalplayer is a creative CLI music player built with C++, focused on
-real-time rhythm visualization in terminal environments.
+vocalplayer is a creative CLI music player built with C++, focused on real-time rhythm visualization in terminal environments.
 
 ## Features
 

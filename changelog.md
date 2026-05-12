@@ -1,6 +1,6 @@
 # Changelog
 
-本文件用于记录 VocalPlayer 的迭代历史，格式参考
+本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
 ## [Unreleased]

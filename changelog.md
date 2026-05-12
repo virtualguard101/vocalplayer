@@ -3,7 +3,7 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
-## [Unreleased]
+## [0.2.0] - 2026-05-12
 
 ### Added
 - 新增可视化扩展数据契约：

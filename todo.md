@@ -48,11 +48,13 @@
 
 - [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline (in `v0.1.1`)
 
-- [ ] Add xmake build config support
+- [x] Add xmake build config support (in `v0.2.0`)
 
 ## Longterm / Debatable Plan
 
 - [ ] 用户自定义颜色主题系统实现
+
+- [ ] 左右声道可视化分析窗口独立
 
 - [ ] 音频解码层 FFmpeg API 并行调用实现
 

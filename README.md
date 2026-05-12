@@ -6,7 +6,9 @@ English | [简体中文](README_zh-CN.md)
 
 A creative C++ CLI music player with real-time rhythm visualization in the terminal.
 
-<video src="assets/vocalplayer.webm" controls width="100%"></video>
+[<img src="assets/demo1.png" alt="vocalplayer demo default theme" width="32%">](assets/vocalplayer.webm)
+[<img src="assets/demo2.png" alt="vocalplayer demo miku theme" width="32%">](assets/vocalplayer.webm)
+[<img src="assets/demo3.png" alt="vocalplayer demo teto theme" width="32%">](assets/vocalplayer.webm)
 
 </div>
 
@@ -98,6 +100,19 @@ or:
 
 ```bash
 just build
+```
+
+or with [xmake](https://xmake.io/):
+
+```bash
+xmake f -m release
+xmake
+```
+
+Run:
+
+```bash
+xmake run vocalplayer /path/to/music-directory
 ```
 
 ### Contributing

@@ -6,7 +6,7 @@
 
 基于C++的创意型CLI音乐播放器，在终端中实现实时节奏可视化。
 
-<video src="assets/vocalplayer.webm" controls width="100%"></video>
+> Demo：[assets/vocalplayer.webm](assets/vocalplayer.webm)
 
 </div>
 
@@ -96,6 +96,19 @@ cmake --build build -j
 
 ```bash
 just build
+```
+
+或者使用 [xmake](https://xmake.io/)：
+
+```bash
+xmake f -m release
+xmake
+```
+
+运行：
+
+```bash
+xmake run vocalplayer /path/to/music-directory
 ```
 
 ### 贡献

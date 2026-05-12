@@ -16,6 +16,7 @@
   - `src/ui/theme.hpp` 定义 `ThemeId`、`Theme`、`GetBuiltinTheme()`、`NextThemeId()`。
   - 预留 `LoadThemeFromConfig()` 接口（暂不实现配置文件解析）。
 - 新增主题测试：`tests/test_theme.cpp`（并接入 `theme_test`）。
+- 新增 `xmake.lua`，提供 xmake 构建入口（含主程序、测试目标与可选 TagLib 支持）。
 
 ### Changed
 - `TuiRenderer` 重构为面板化布局：顶栏、主可视化区、播放列表区、底栏。
@@ -31,6 +32,7 @@
 ### Docs
 - 同步更新 `README.md` 与 `README_zh-CN.md`，补充新增可视化、主题和交互说明。
 - 同步更新 `docs/dev/architecture.md` 与 `docs/dev/architecture_zh-CN.md`，反映新的数据契约、分析接口与 UI 架构。
+- 同步更新中英文 README，补充 xmake 构建与运行命令。
 
 ## [0.1.1] - 2026-05-10
 

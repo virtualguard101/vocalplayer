@@ -3,6 +3,20 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [0.2.1] - 2026-05-12
+
+### Changed
+- 路径字符串处理统一为 UTF-8 语义（播放列表扫描、曲目显示名、元数据标题回退），降低跨平台字符集不一致导致的显示异常。
+- CMake 的 TagLib 探测升级为双策略：优先 `find_package(TagLib CONFIG)`，失败后回退到 `pkg-config`。
+- 配置阶段增加 TagLib 元数据能力状态提示，便于定位 `artist/title` 回退原因。
+
+### Fixed
+- Windows 启动时显式初始化 UTF-8 终端输入/输出编码与本地化环境，修复中文/日文等元数据显示异常问题。
+- Windows 平台解码入口改用宽字符文件 API（`ma_decoder_init_file_w`），修复含 CJK 路径时文件打开不稳定的问题。
+
+### Docs
+- 更新 `README.md` 与 `README_zh-CN.md`，补充 Windows UTF-8 终端建议与 TagLib 查找顺序说明。
+
 ## [0.2.0] - 2026-05-12
 
 ### Added

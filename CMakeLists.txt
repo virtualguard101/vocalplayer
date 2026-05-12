@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(
   VocalPlayer
-  VERSION 0.2.0
+  VERSION 0.2.1
   LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -42,8 +42,10 @@ add_library(
   ${kissfft_SOURCE_DIR}/kiss_fft.c)
 target_include_directories(kissfft_lib PUBLIC ${kissfft_SOURCE_DIR})
 
+find_package(TagLib CONFIG QUIET)
+
 find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
+if(PkgConfig_FOUND AND NOT TagLib_FOUND)
   pkg_check_modules(TAGLIB QUIET IMPORTED_TARGET taglib)
 endif()
 
@@ -72,9 +74,25 @@ target_link_libraries(
     ftxui::dom
     ftxui::component)
 
-if(TAGLIB_FOUND)
+set(VOCALPLAYER_TAGLIB_ENABLED OFF)
+if(TagLib_FOUND AND TARGET TagLib::tag)
+  target_compile_definitions(vocalplayer_core PUBLIC VOCALPLAYER_HAS_TAGLIB=1)
+  target_link_libraries(vocalplayer_core PUBLIC TagLib::tag)
+  set(VOCALPLAYER_TAGLIB_ENABLED ON)
+elseif(TagLib_FOUND AND TARGET TagLib::TagLib)
+  target_compile_definitions(vocalplayer_core PUBLIC VOCALPLAYER_HAS_TAGLIB=1)
+  target_link_libraries(vocalplayer_core PUBLIC TagLib::TagLib)
+  set(VOCALPLAYER_TAGLIB_ENABLED ON)
+elseif(TAGLIB_FOUND)
   target_compile_definitions(vocalplayer_core PUBLIC VOCALPLAYER_HAS_TAGLIB=1)
   target_link_libraries(vocalplayer_core PUBLIC PkgConfig::TAGLIB)
+  set(VOCALPLAYER_TAGLIB_ENABLED ON)
+endif()
+
+if(VOCALPLAYER_TAGLIB_ENABLED)
+  message(STATUS "TagLib metadata support: ENABLED")
+else()
+  message(STATUS "TagLib metadata support: DISABLED (artist/title fallback mode)")
 endif()
 
 add_executable(vocalplayer src/main.cpp)

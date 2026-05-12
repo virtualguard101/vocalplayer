@@ -26,6 +26,8 @@
 
   - [x] 引入播放器UI会话缓存机制
 
+- [ ] v0.2.1: 修复Windows UTF8编码及乐曲元数据显示问题 (#6)
+
 - [ ] v0.3.*: 引入字符艺术动态背景引擎
   
   - [ ] 引入UTF-8/ASCII字符艺术（主推泛vocaloid主题：Miku、Gumi、IA、Teto等）

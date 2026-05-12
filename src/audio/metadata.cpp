@@ -17,6 +17,15 @@
 #endif
 
 namespace vocalplayer {
+namespace {
+
+// Convert filesystem path to UTF-8 for terminal metadata display.
+std::string ToUtf8String(const std::filesystem::path& path) {
+  std::u8string utf8 = path.u8string();
+  return std::string(utf8.begin(), utf8.end());
+}
+
+}  // namespace
 
 // Compose UI metadata using path-based fallback plus optional TagLib tags.
 TrackInfo MetadataReader::ReadTrackInfo(const std::string& file_path,
@@ -31,7 +40,7 @@ TrackInfo MetadataReader::ReadTrackInfo(const std::string& file_path,
       static_cast<double>(frame_count) / static_cast<double>(sample_rate_hz);
 
   std::filesystem::path path(file_path);
-  info.title = path.stem().string();
+  info.title = ToUtf8String(path.stem());
   info.artist = "Unknown Artist";
 
 #ifdef VOCALPLAYER_HAS_TAGLIB

@@ -25,13 +25,19 @@ constexpr uint32_t kWaveformPointCount = 96;
 constexpr uint32_t kBandEnergyCount = 3;
 constexpr float kPeakDecayPerFrame = 0.035f;
 
+// Convert filesystem path to UTF-8 text for terminal rendering.
+std::string ToUtf8String(const std::filesystem::path& path) {
+  std::u8string utf8 = path.u8string();
+  return std::string(utf8.begin(), utf8.end());
+}
+
 // Build display-friendly short names from absolute playlist paths.
 std::vector<std::string> BuildTrackDisplayNames(
     const std::vector<std::string>& playlist) {
   std::vector<std::string> names;
   names.reserve(playlist.size());
   for (const std::string& path : playlist) {
-    names.push_back(std::filesystem::path(path).filename().string());
+    names.push_back(ToUtf8String(std::filesystem::path(path).filename()));
   }
   return names;
 }

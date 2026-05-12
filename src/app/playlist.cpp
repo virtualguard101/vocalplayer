@@ -19,6 +19,12 @@
 namespace vocalplayer {
 namespace {
 
+// Convert filesystem path to UTF-8 for UI display and cross-platform transport.
+std::string ToUtf8String(const std::filesystem::path& path) {
+  std::u8string utf8 = path.u8string();
+  return std::string(utf8.begin(), utf8.end());
+}
+
 // Lowercase ASCII text for extension comparison.
 std::string ToLower(std::string value) {
   std::transform(
@@ -31,7 +37,7 @@ std::string ToLower(std::string value) {
 bool IsSupportedAudioFile(const std::filesystem::path& file_path) {
   static const std::vector<std::string> kSupportedExtensions = {
       ".wav", ".flac", ".mp3", ".ogg", ".opus", ".m4a", ".aac"};
-  std::string extension = ToLower(file_path.extension().string());
+  std::string extension = ToLower(ToUtf8String(file_path.extension()));
   return std::find(kSupportedExtensions.begin(), kSupportedExtensions.end(),
                    extension) != kSupportedExtensions.end();
 }
@@ -49,9 +55,9 @@ std::vector<std::string> BuildPlaylist(const std::string& input_path) {
   if (std::filesystem::is_regular_file(path)) {
     if (!IsSupportedAudioFile(path)) {
       throw std::runtime_error("Unsupported audio file extension: " +
-                               path.extension().string());
+                               ToUtf8String(path.extension()));
     }
-    playlist.push_back(std::filesystem::absolute(path).string());
+    playlist.push_back(ToUtf8String(std::filesystem::absolute(path)));
     return playlist;
   }
 
@@ -65,7 +71,7 @@ std::vector<std::string> BuildPlaylist(const std::string& input_path) {
     }
     const std::filesystem::path& file_path = entry.path();
     if (IsSupportedAudioFile(file_path)) {
-      playlist.push_back(std::filesystem::absolute(file_path).string());
+      playlist.push_back(ToUtf8String(std::filesystem::absolute(file_path)));
     }
   }
 

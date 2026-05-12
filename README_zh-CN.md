@@ -85,6 +85,16 @@ CMake 会自动拉取以下第三方库：
 - `kissfft`
 - `FTXUI`
 
+### Windows 说明
+
+- 为了正确显示中文/日文等元数据，请使用支持 UTF-8 的终端与字体
+  （例如 Windows Terminal + CJK 字体）。
+- CMake 现在按以下顺序查找 TagLib：
+  1. `find_package(TagLib CONFIG)`
+  2. `pkg-config taglib` 回退
+- 若未找到 TagLib，程序仍可运行，但会回退为文件名标题和
+  `Unknown Artist`。
+
 ### 构建
 
 ```bash

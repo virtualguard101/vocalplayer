@@ -29,6 +29,12 @@ struct Keybindings {
   char move_selection_up = 'k';
   /// Move playlist selection down.
   char move_selection_down = 'j';
+  /// Cycle visualization layout mode.
+  char cycle_visual_mode = 'm';
+  /// Toggle waveform raw/envelope rendering style.
+  char toggle_waveform_style = 'v';
+  /// Cycle built-in theme palette.
+  char cycle_theme = 't';
   /// Quit session key.
   char quit = 'q';
 };

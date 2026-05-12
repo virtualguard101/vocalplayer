@@ -6,6 +6,8 @@ English | [简体中文](README_zh-CN.md)
 
 A creative C++ CLI music player with real-time rhythm visualization in the terminal.
 
+<video src="assets/vocalplayer.webm" controls width="100%"></video>
+
 </div>
 
 vocalplayer is a creative CLI music player built with C++, focused on
@@ -15,9 +17,12 @@ real-time rhythm visualization in terminal environments.
 
 - Local audio playback (`wav` and formats supported by the miniaudio decoder).
 - Directory scan + simple playlist sorted by name.
-- Real-time spectrum bars and waveform rendering in TUI mode.
+- Real-time spectrum bars with peak-hold markers and dual waveform modes.
+- Additional audio meters (RMS, Peak, and low/mid/high band energy).
 - Track metadata display (`title`, `artist`, and duration; TagLib optional).
 - Vim-style playlist interaction (`h/l/j/k`) and Enter-to-play confirmation.
+- Panel layout mode switching (`Overview/Spectrum/Waveform/Meters`) and
+  runtime built-in theme cycling.
 
 ## Usage
 
@@ -37,6 +42,9 @@ Press `q` in the TUI to quit the current session.
 - `Space`: pause/resume current track
 - `j`: move playlist selection down
 - `k`: move playlist selection up
+- `m`: cycle visualization layout mode
+- `v`: toggle waveform style (`Raw` / `Envelope`)
+- `t`: cycle built-in theme (`Default` / `Neon` / `Mono`)
 - Mouse wheel: scroll playlist viewport
 - Left click on a playlist item: select that track only
 - `Enter`: play the currently selected track

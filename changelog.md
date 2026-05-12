@@ -5,6 +5,33 @@
 
 ## [Unreleased]
 
+### Added
+- 新增可视化扩展数据契约：
+  - `VisualFrame` 增加频谱峰值保持、包络波形、`rms_level`、`peak_level`、`band_energies` 与 `visual_mode` 字段。
+- 新增分析能力：
+  - `SpectrumAnalyzer::ComputeWaveformEnvelope()`
+  - `SpectrumAnalyzer::ComputeLevels()`
+  - `SpectrumAnalyzer::ComputeBandEnergies()`
+- 新增内置主题系统：
+  - `src/ui/theme.hpp` 定义 `ThemeId`、`Theme`、`GetBuiltinTheme()`、`NextThemeId()`。
+  - 预留 `LoadThemeFromConfig()` 接口（暂不实现配置文件解析）。
+- 新增主题测试：`tests/test_theme.cpp`（并接入 `theme_test`）。
+
+### Changed
+- `TuiRenderer` 重构为面板化布局：顶栏、主可视化区、播放列表区、底栏。
+- 频谱渲染增加峰值保持标记；波形支持 `Raw/Envelope` 双模式切换。
+- 增加音频仪表展示：RMS、Peak、低中高频段能量。
+- 增加运行时交互键位：
+  - `m`：切换可视化布局模式
+  - `v`：切换波形样式
+  - `t`：切换内置主题
+- 播放列表鼠标命中逻辑从固定行号偏移改为基于渲染区域 `Box` 反射定位，降低布局改动带来的点击偏移风险。
+- `CMakeLists.txt` 重新格式化并补齐 `test_theme` 链接依赖（`ftxui::screen`）。
+
+### Docs
+- 同步更新 `README.md` 与 `README_zh-CN.md`，补充新增可视化、主题和交互说明。
+- 同步更新 `docs/dev/architecture.md` 与 `docs/dev/architecture_zh-CN.md`，反映新的数据契约、分析接口与 UI 架构。
+
 ## [0.1.1] - 2026-05-10
 
 ### Added

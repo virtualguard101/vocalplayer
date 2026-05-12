@@ -16,11 +16,11 @@
 
 - v0.2.0: 频谱/波形可视化UI增强
 
-  - [ ] 增强频谱/波形可视化UI（增加颜色、动画、交互等）
+  - [x] 增强频谱/波形可视化UI（增加颜色、动画、交互等）
 
-  - [ ] 引入颜色主题系统（默认、用户自定义配置接口
+  - [x] 引入颜色主题系统（默认、预留用户自定义配置接口）
 
-  - [ ] 引入更丰富的可视化效果（如波形、频谱、波形图、频谱图等）
+  - [x] 引入更丰富的可视化效果（如波形、频谱、波形图、频谱图等）
 
 - v0.3.0: 引入字符艺术动态背景引擎
   
@@ -30,7 +30,7 @@
 
 - v0.4.0: 引入ncmdump API；实现自动读取网易云本地音乐库；
 
-## Project Engineering Practices:
+## Project Engineering Practices
 
 - [x] Formatted code with clang-format (in `v0.1.0`)
 
@@ -42,7 +42,9 @@
 
 - [ ] Add xmake build config support
 
-## Longterm Plan
+## Longterm / Debatable Plan
+
+- [ ] 音频解码层 FFmpeg API 并行调用实现
 
 - [ ] Rust Version: Rust并行实现
 

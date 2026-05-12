@@ -10,6 +10,9 @@ int main() {
   assert(keybindings.toggle_pause == ' ');
   assert(keybindings.move_selection_up == 'k');
   assert(keybindings.move_selection_down == 'j');
+  assert(keybindings.cycle_visual_mode == 'm');
+  assert(keybindings.toggle_waveform_style == 'v');
+  assert(keybindings.cycle_theme == 't');
   assert(keybindings.quit == 'q');
 
   vocalplayer::Keybindings custom;

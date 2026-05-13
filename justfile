@@ -1,4 +1,5 @@
 alias qc := quick-check
+alias cw := cross-windows
 
 build:
     cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -20,6 +21,9 @@ format:
 test:
     ctest --test-dir build --output-on-failure
 
+cross-windows *ARGS:
+    scripts/build-windows.sh {{ARGS}}
+
 clean:
-    rm -rf build
+    rm -rf build build-win
     rm -f compile_commands.json

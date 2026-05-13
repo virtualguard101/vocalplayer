@@ -9,6 +9,31 @@
 
 - 移除 xmake 构建支持，仅保留 CMake 构建支持。
 
+### Fixed
+
+- 修复 Linux → Windows 交叉编译时 `pkg_check_modules(taglib)` 误识别宿主
+  TagLib，导致 Linux glibc 头目录 `/usr/include` 被注入 MinGW 编译命令，
+  触发 `uintptr_t`/`time_t`/`wctype_t` 等 typedef 冲突与 `fwide`/`pthread_*`
+  未声明的级联错误。Toolchain 现在显式把 `PKG_CONFIG_LIBDIR`、
+  `PKG_CONFIG_PATH`、`PKG_CONFIG_SYSROOT_DIR` 钉到 MinGW sysroot，
+  保证 `pkg_check_modules` 只在交叉 sysroot 内搜索。
+
+### DevEx
+
+- 新增 MinGW-w64 交叉编译工具链 `cmake/toolchains/mingw-w64-x86_64.cmake`，
+  静态链接 MinGW 运行时，产物为单文件可分发的 `vocalplayer.exe`。
+- 新增一键交叉编译脚本 `scripts/build-windows.sh`，自动检测
+  `x86_64-w64-mingw32-{gcc,g++}` 与 `ninja` 是否可用，并在检测到 `wine` 时
+  自动注入 `CMAKE_CROSSCOMPILING_EMULATOR`，使 `ctest` 透明运行 `.exe`。
+- 扩展 `justfile`：新增 `cross-windows` 入口，并在 `clean` 中清理 `build-win/`。
+- 扩展 `.gitignore`，增加 `build-*/` 通配以隔离交叉/变体构建目录。
+
+### Docs
+
+- 在 `README.md` 与 `README_zh-CN.md` 增加 “Cross build (Linux → Windows)”
+  / “交叉编译（Linux → Windows）” 章节，说明前置依赖、一键命令与 TagLib
+  在 MinGW 下回退的预期行为。
+
 ## [0.2.1] - 2026-05-12
 
 ### Changed

@@ -50,7 +50,7 @@
 
 - [x] Add clang-tidy, tests and release builds in GitHub CI/CD pipeline (in `v0.1.1`)
 
-- [x] Add xmake build config support (in `v0.2.0`)
+- [ ] Add xmake build config support
 
 ## Longterm / Debatable Plan
 

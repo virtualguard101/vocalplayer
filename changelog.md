@@ -3,6 +3,12 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [Unreleased] - 2026-05-13
+
+### Changed
+
+- 移除 xmake 构建支持，仅保留 CMake 构建支持。
+
 ## [0.2.1] - 2026-05-12
 
 ### Changed

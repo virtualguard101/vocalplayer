@@ -112,19 +112,6 @@ or:
 just build
 ```
 
-or with [xmake](https://xmake.io/):
-
-```bash
-xmake f -m release
-xmake
-```
-
-Run:
-
-```bash
-xmake run vocalplayer /path/to/music-directory
-```
-
 ### Contributing
 
 Contributor-oriented workflows are documented in [`contributing.md`](contributing.md) ([简体中文](contributing_zh-CN.md)).

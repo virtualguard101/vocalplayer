@@ -108,19 +108,6 @@ cmake --build build -j
 just build
 ```
 
-或者使用 [xmake](https://xmake.io/)：
-
-```bash
-xmake f -m release
-xmake
-```
-
-运行：
-
-```bash
-xmake run vocalplayer /path/to/music-directory
-```
-
 ### 贡献
 
 贡献流程相关内容参见[`contributing_zh-CN.md`](contributing_zh-CN.md)（[English](contributing.md)）。

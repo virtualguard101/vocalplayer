@@ -11,6 +11,3 @@ cmake_install.cmake
 
 # Compile database (local LSP artifact)
 compile_commands.json
-
-# xmake local cache
-.xmake/

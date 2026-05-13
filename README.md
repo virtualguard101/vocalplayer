@@ -18,8 +18,9 @@ vocalplayer is a creative CLI music player built with C++, focused on real-time 
 
 - Local audio playback (`wav` and formats supported by the miniaudio decoder).
 - Directory scan + simple playlist sorted by name.
-- Real-time spectrum bars with peak-hold markers and dual waveform modes.
-- Additional audio meters (RMS, Peak, and low/mid/high band energy).
+- Real-time spectrum bars with peak-hold markers and dual waveform modes,
+  rendered independently for left/right channels (mono duplicates channel 0).
+- Additional audio meters (RMS, Peak, and low/mid/high band energy) per side.
 - Track metadata display (`title`, `artist`, and duration; TagLib optional).
 - Vim-style playlist interaction (`h/l/j/k`) and Enter-to-play confirmation.
 - Panel layout mode switching (`Overview/Spectrum/Waveform/Meters`) and

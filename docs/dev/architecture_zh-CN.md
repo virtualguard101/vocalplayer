@@ -9,8 +9,9 @@
 
 - 输入：支持单个音频文件或音频目录。
 - 播放：通过 miniaudio 执行本地解码缓冲播放。
-- 可视化：通过 FTXUI 实现频谱柱（含峰值保持）与双模式波形渲染。
-- 仪表：支持 RMS/Peak 与低中高频段能量显示。
+- 可视化：通过 FTXUI 实现频谱柱（含峰值保持）与双模式波形渲染；左右声道
+  独立分析（单声道复制声道 0）。
+- 仪表：左右声道分别显示 RMS/Peak 与低中高频段能量。
 - 元数据：优先通过 TagLib 读取标题与艺术家（可选），并提供回退策略。
 - 交互：支持 `h/l`、`j/k`、`Space`、`Enter` 及鼠标选择/滚轮滚动。
 - 模式：支持 `m` 切换可视化布局、`v` 切换波形样式、`t` 切换主题。
@@ -29,11 +30,13 @@ flowchart LR
   decoder --> decodedTrack[DecodedTrack]
   metadataReader --> trackInfo[TrackInfo]
   audioEngine --> playbackState[PlaybackState]
-  audioEngine --> monoWindow[MonoWindow]
+  audioEngine --> channelWindowL[ChannelWindow_L]
+  audioEngine --> channelWindowR[ChannelWindow_R]
   spectrumAnalyzer --> visualFrame[VisualFrame]
   playbackState --> visualFrame
   trackInfo --> visualFrame
-  monoWindow --> spectrumAnalyzer
+  channelWindowL --> spectrumAnalyzer
+  channelWindowR --> spectrumAnalyzer
   visualFrame --> tuiRenderer
 ```
 
@@ -65,9 +68,9 @@ sequenceDiagram
     App->>UI: Run(frameProvider, shouldStop)
     loop 每帧刷新
       UI->>Audio: GetPlaybackState()
-      UI->>Audio: GetRecentMonoWindow(2048)
-      UI->>Analyzer: ComputeBars(monoWindow)
-      UI->>Analyzer: ComputeWaveform(monoWindow, 96)
+      UI->>Audio: GetRecentChannelWindow(0,2048)
+      UI->>Audio: GetRecentChannelWindow(1,2048)
+      UI->>Analyzer: 分析左右声道窗口写入 VisualFrame.left/right
       UI-->>UI: 渲染 VisualFrame
     end
     App->>Audio: Stop()
@@ -142,7 +145,7 @@ flowchart TB
   - 驱动音频输出设备并维护播放游标/状态。
   - 提供暂停恢复与分析窗口提取能力。
 - `SpectrumAnalyzer`
-  - 将单声道窗口转换为频谱柱、峰值保持提示、波形点、包络波形和仪表指标。
+  - 将各声道时域窗口转换为频谱柱、峰值提示、波形点、包络波形与仪表指标。
 - `TuiRenderer`
   - 以面板化布局渲染终端界面（顶栏/主可视化区/播放列表/底栏）。
   - 将键鼠输入转换为 `UiIntent`。
@@ -157,7 +160,7 @@ flowchart TB
   - `TrackInfo MetadataReader::ReadTrackInfo(...) const`
   - `AudioEngine::{Load, Start, Pause, Resume, TogglePause, Stop}`
   - `PlaybackState AudioEngine::GetPlaybackState() const`
-  - `std::vector<float> AudioEngine::GetRecentMonoWindow(uint32_t) const`
+  - `std::vector<float> AudioEngine::GetRecentChannelWindow(uint32_t channel_index, uint32_t) const`
 - 分析层接口
   - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
   - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
@@ -182,15 +185,15 @@ flowchart LR
   metadataReader --> trackInfo[TrackInfo]
   decodedTrack --> audioEngine[AudioEngine]
   trackInfo --> audioEngine
-  audioEngine --> monoWindow[MonoWindow]
-  monoWindow --> spectrumAnalyzer[SpectrumAnalyzer]
-  spectrumAnalyzer --> spectrumBars[SpectrumBars]
-  spectrumAnalyzer --> waveformPoints[WaveformPoints]
+  audioEngine --> channelWindowL[ChannelWindow_L]
+  audioEngine --> channelWindowR[ChannelWindow_R]
+  channelWindowL --> spectrumAnalyzer[SpectrumAnalyzer]
+  channelWindowR --> spectrumAnalyzer
+  spectrumAnalyzer --> channelVisuals[ChannelVisuals_LR]
   audioEngine --> playbackState[PlaybackState]
   trackInfo --> visualFrame[VisualFrame]
   playbackState --> visualFrame
-  spectrumBars --> visualFrame
-  waveformPoints --> visualFrame
+  channelVisuals --> visualFrame
   visualFrame --> tuiRenderer[TuiRenderer]
   userInput[键盘与鼠标输入] --> tuiRenderer
   tuiRenderer --> uiIntent[UiIntent]
@@ -212,7 +215,9 @@ flowchart LR
 - `DecodedTrack`：交错存储的浮点采样与流格式信息。
 - `TrackInfo`：来源路径、标题、艺术家、时长和采样相关元信息。
 - `PlaybackState`：已播放时间、总时长及运行态标记。
-- `VisualFrame`：每个刷新周期生成的 UI 只读快照，包含频谱峰值、包络波形、RMS/Peak 和频段能量等扩展字段。
+- `ChannelVisuals`：单侧频谱、波形、RMS/Peak 与频段能量等可视化快照。
+- `VisualFrame`：每个刷新周期的 UI 只读快照，包含 `left`/`right` 两组
+  `ChannelVisuals` 与首选可视化模式。
 
 这种“数据契约优先”的设计，使后续迁移到 Rust 时可以在保持边界稳定的前提下，
 替换具体模块实现。

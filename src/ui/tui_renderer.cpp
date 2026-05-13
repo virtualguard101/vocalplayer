@@ -34,7 +34,7 @@ using namespace ftxui;  // NOLINT
 constexpr int kPlaylistVisibleRows = 10;
 constexpr int kSpectrumCanvasHeight = 32;
 constexpr int kWaveformCanvasHeight = 20;
-constexpr int kMeterGaugeWidth = 18;
+constexpr int kStereoMeterGaugeWidth = 14;
 constexpr float kSpectrumPeakThreshold = 0.03f;
 
 // Format seconds as mm:ss for compact top status line.
@@ -120,6 +120,112 @@ Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
           c.DrawPointLine(0, max_y, canvas_width - 1, max_y, Color::GrayDark);
         }
       });
+}
+
+/**
+ * @brief Render RMS/Peak/Band gauges for one analyzed channel.
+ *
+ * @param title Window title text.
+ * @param ch Per-channel visualization snapshot.
+ * @param theme Active color theme.
+ * @param gauge_width Fixed gauge width in terminal cells.
+ * @return FTXUI element tree for the meters panel.
+ */
+Element RenderChannelMetersWindow(const std::string& title,
+                                  const ChannelVisuals& ch, const Theme& theme,
+                                  int gauge_width) {
+  return window(
+      text(title) | color(theme.title_color),
+      vbox({
+          hbox({text("RMS  ") | color(theme.text_color),
+                gauge(ch.rms_level) | color(theme.meter_color) |
+                    size(WIDTH, EQUAL, gauge_width)}),
+          hbox({text("Peak ") | color(theme.text_color),
+                gauge(ch.peak_level) | color(theme.warning_color) |
+                    size(WIDTH, EQUAL, gauge_width)}),
+          separator(),
+          text("Bands") | color(theme.accent_color),
+          hbox(
+              {text("Low  ") | color(theme.text_color),
+               gauge(ch.band_energies.size() > 0 ? ch.band_energies[0] : 0.0F) |
+                   color(theme.spectrum_color) |
+                   size(WIDTH, EQUAL, gauge_width)}),
+          hbox(
+              {text("Mid  ") | color(theme.text_color),
+               gauge(ch.band_energies.size() > 1 ? ch.band_energies[1] : 0.0F) |
+                   color(theme.accent_color) |
+                   size(WIDTH, EQUAL, gauge_width)}),
+          hbox(
+              {text("High ") | color(theme.text_color),
+               gauge(ch.band_energies.size() > 2 ? ch.band_energies[2] : 0.0F) |
+                   color(theme.peak_color) | size(WIDTH, EQUAL, gauge_width)}),
+      }));
+}
+
+/**
+ * @brief Lay out left/right spectrum canvases horizontally.
+ *
+ * @param left Left channel visuals.
+ * @param right Right channel visuals.
+ * @param theme Active color theme.
+ * @return FTXUI element tree for the stereo spectrum row.
+ */
+Element StereoSpectrumRow(const ChannelVisuals& left,
+                          const ChannelVisuals& right, const Theme& theme) {
+  return hbox({
+      window(
+          text("Spectrum L") | color(theme.title_color),
+          RenderSpectrum(left.spectrum_bars, left.spectrum_peak_bars, theme)) |
+          flex,
+      window(text("Spectrum R") | color(theme.title_color),
+             RenderSpectrum(right.spectrum_bars, right.spectrum_peak_bars,
+                            theme)) |
+          flex,
+  });
+}
+
+/**
+ * @brief Lay out left/right waveform canvases horizontally.
+ *
+ * @param left Left channel visuals.
+ * @param right Right channel visuals.
+ * @param use_envelope When true, draw envelope waveform points per side.
+ * @param theme Active color theme.
+ * @return FTXUI element tree for the stereo waveform row.
+ */
+Element StereoWaveformRow(const ChannelVisuals& left,
+                          const ChannelVisuals& right, bool use_envelope,
+                          const Theme& theme) {
+  const std::vector<float>& wave_l =
+      use_envelope ? left.waveform_envelope_points : left.waveform_points;
+  const std::vector<float>& wave_r =
+      use_envelope ? right.waveform_envelope_points : right.waveform_points;
+  const std::string style = use_envelope ? "(Env)" : "(Raw)";
+  return hbox({
+      window(text("Wave L " + style) | color(theme.title_color),
+             RenderWaveform(wave_l, theme)) |
+          flex,
+      window(text("Wave R " + style) | color(theme.title_color),
+             RenderWaveform(wave_r, theme)) |
+          flex,
+  });
+}
+
+/**
+ * @brief Lay out left/right meter panels horizontally.
+ *
+ * @param left Left channel visuals.
+ * @param right Right channel visuals.
+ * @param theme Active color theme.
+ * @param gauge_width Fixed gauge width in terminal cells.
+ * @return FTXUI element tree for the stereo meters row.
+ */
+Element StereoMetersRow(const ChannelVisuals& left, const ChannelVisuals& right,
+                        const Theme& theme, int gauge_width) {
+  return hbox({
+      RenderChannelMetersWindow("Meters L", left, theme, gauge_width) | flex,
+      RenderChannelMetersWindow("Meters R", right, theme, gauge_width) | flex,
+  });
 }
 
 // Clamp playlist viewport start offset into valid range.
@@ -312,63 +418,32 @@ void TuiRenderer::Run(
       ratio = static_cast<float>(state.elapsed_sec / state.duration_sec);
     }
 
-    const std::vector<float>& wave_source =
-        use_envelope_waveform ? latest_frame.waveform_envelope_points
-                              : latest_frame.waveform_points;
-    Element spectrum_panel =
-        window(text("Spectrum") | color(theme.title_color),
-               RenderSpectrum(latest_frame.spectrum_bars,
-                              latest_frame.spectrum_peak_bars, theme));
-    Element waveform_panel = window(
-        text(use_envelope_waveform ? "Waveform (Envelope)" : "Waveform (Raw)") |
-            color(theme.title_color),
-        RenderWaveform(wave_source, theme));
-    Element meters_panel = window(
-        text("Meters") | color(theme.title_color),
-        vbox({
-            hbox({text("RMS  ") | color(theme.text_color),
-                  gauge(latest_frame.rms_level) | color(theme.meter_color) |
-                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
-            hbox({text("Peak ") | color(theme.text_color),
-                  gauge(latest_frame.peak_level) | color(theme.warning_color) |
-                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
-            separator(),
-            text("Bands") | color(theme.accent_color),
-            hbox({text("Low  ") | color(theme.text_color),
-                  gauge(latest_frame.band_energies.size() > 0
-                            ? latest_frame.band_energies[0]
-                            : 0.0F) |
-                      color(theme.spectrum_color) |
-                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
-            hbox({text("Mid  ") | color(theme.text_color),
-                  gauge(latest_frame.band_energies.size() > 1
-                            ? latest_frame.band_energies[1]
-                            : 0.0F) |
-                      color(theme.accent_color) |
-                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
-            hbox({text("High ") | color(theme.text_color),
-                  gauge(latest_frame.band_energies.size() > 2
-                            ? latest_frame.band_energies[2]
-                            : 0.0F) |
-                      color(theme.peak_color) |
-                      size(WIDTH, EQUAL, kMeterGaugeWidth)}),
-        }));
+    const ChannelVisuals& ch_l = latest_frame.left;
+    const ChannelVisuals& ch_r = latest_frame.right;
+    Element stereo_spectrum = StereoSpectrumRow(ch_l, ch_r, theme);
+    Element stereo_waveform =
+        StereoWaveformRow(ch_l, ch_r, use_envelope_waveform, theme);
+    Element stereo_meters =
+        StereoMetersRow(ch_l, ch_r, theme, kStereoMeterGaugeWidth);
 
     Element visual_area;
     switch (active_visual_mode) {
       case VisualMode::kSpectrumFocus:
-        visual_area = hbox({spectrum_panel | flex, meters_panel | flex});
+        visual_area = hbox({stereo_spectrum | flex, stereo_meters | flex});
         break;
       case VisualMode::kWaveformFocus:
-        visual_area = hbox({waveform_panel | flex, meters_panel | flex});
+        visual_area = hbox({stereo_waveform | flex, stereo_meters | flex});
         break;
       case VisualMode::kMeterFocus:
-        visual_area = hbox({meters_panel | flex, spectrum_panel | flex});
+        visual_area = hbox({stereo_meters | flex, stereo_spectrum | flex});
         break;
       case VisualMode::kOverview:
       default:
-        visual_area = hbox({spectrum_panel | flex, waveform_panel | flex,
-                            meters_panel | flex});
+        visual_area = vbox({
+            stereo_spectrum | flex,
+            stereo_waveform | flex,
+            stereo_meters | flex,
+        });
         break;
     }
 

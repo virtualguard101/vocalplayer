@@ -82,13 +82,16 @@ class AudioEngine {
    */
   [[nodiscard]] PlaybackState GetPlaybackState() const;
   /**
-   * @brief Extract a recent mono analysis window near current cursor.
+   * @brief Extract a recent single-channel analysis window near current cursor.
    *
-   * @param window_size Requested mono sample count.
-   * @return Mono samples used by SpectrumAnalyzer.
+   * @param channel_index Channel index in interleaved PCM order.
+   * @param window_size Requested sample count for that channel.
+   * @return Channel samples aligned in time with prior mono-window semantics.
+   * @note If `channel_index` is out of range for the loaded track, returns
+   * silence.
    */
-  [[nodiscard]] std::vector<float> GetRecentMonoWindow(
-      uint32_t window_size) const;
+  [[nodiscard]] std::vector<float> GetRecentChannelWindow(
+      uint32_t channel_index, uint32_t window_size) const;
   /**
    * @brief Get metadata for currently loaded track.
    *

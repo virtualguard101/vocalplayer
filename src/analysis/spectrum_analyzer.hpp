@@ -16,7 +16,7 @@
 namespace vocalplayer {
 
 /**
- * @brief Basic level metrics derived from a mono audio window.
+ * @brief Basic level metrics derived from a single-channel audio window.
  */
 struct AudioLevels {
   /// Root-mean-square level in [0, 1].
@@ -26,7 +26,8 @@ struct AudioLevels {
 };
 
 /**
- * @brief FFT-based analyzer that converts mono windows to UI features.
+ * @brief FFT-based analyzer that converts single-channel windows to UI
+ * features.
  */
 class SpectrumAnalyzer {
  public:
@@ -47,41 +48,43 @@ class SpectrumAnalyzer {
   SpectrumAnalyzer& operator=(const SpectrumAnalyzer&) = delete;
 
   /**
-   * @brief Compute normalized spectrum bars from a mono sample window.
+   * @brief Compute normalized spectrum bars from a single-channel sample
+   * window.
    *
-   * @param mono_window Input mono samples, usually from AudioEngine.
+   * @param mono_window Input samples for one channel (same length as engine
+   * window).
    * @return Smoothed normalized bar amplitudes.
    */
   std::vector<float> ComputeBars(const std::vector<float>& mono_window);
   /**
-   * @brief Downsample mono samples into waveform points for terminal drawing.
+   * @brief Downsample one channel into waveform points for terminal drawing.
    *
-   * @param mono_window Input mono samples.
+   * @param mono_window Input samples for one channel.
    * @param points Number of output points.
    * @return Normalized waveform points in [0, 1].
    */
   std::vector<float> ComputeWaveform(const std::vector<float>& mono_window,
                                      uint32_t points) const;
   /**
-   * @brief Build a smoothed envelope waveform from absolute mono amplitudes.
+   * @brief Build a smoothed envelope waveform from absolute amplitudes.
    *
-   * @param mono_window Input mono samples.
+   * @param mono_window Input samples for one channel.
    * @param points Number of output points.
    * @return Normalized envelope points in [0, 1].
    */
   std::vector<float> ComputeWaveformEnvelope(
       const std::vector<float>& mono_window, uint32_t points) const;
   /**
-   * @brief Compute RMS and peak levels from mono samples.
+   * @brief Compute RMS and peak levels from one channel of samples.
    *
-   * @param mono_window Input mono samples.
+   * @param mono_window Input samples for one channel.
    * @return AudioLevels with normalized RMS/peak metrics.
    */
   AudioLevels ComputeLevels(const std::vector<float>& mono_window) const;
   /**
    * @brief Compute coarse normalized frequency-band energies.
    *
-   * @param mono_window Input mono samples.
+   * @param mono_window Input samples for one channel.
    * @param band_count Number of output bands.
    * @return Vector of normalized energies in [0, 1].
    */

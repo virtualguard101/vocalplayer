@@ -9,8 +9,9 @@ Implemented scope:
 
 - File or directory input.
 - Decoding + playback via miniaudio.
-- Real-time spectrum (with peak-hold) and dual waveform rendering in terminal.
-- Meter panels for RMS/Peak and low/mid/high frequency band energy.
+- Real-time spectrum (with peak-hold) and dual waveform rendering in terminal,
+  analyzed independently for left/right channels (mono duplicates channel 0).
+- Meter panels for RMS/Peak and low/mid/high frequency band energy per side.
 - Playlist interactions (`h/l`, `j/k`, `Space`, `Enter`, mouse select/scroll).
 - View-mode switching (`m`), waveform style toggle (`v`), and theme cycling (`t`).
 - Optional metadata enrichment via TagLib.
@@ -29,11 +30,13 @@ flowchart LR
   decoder --> decodedTrack[DecodedTrack]
   metadataReader --> trackInfo[TrackInfo]
   audioEngine --> playbackState[PlaybackState]
-  audioEngine --> monoWindow[MonoWindow]
+  audioEngine --> channelWindowL[ChannelWindow_L]
+  audioEngine --> channelWindowR[ChannelWindow_R]
   spectrumAnalyzer --> visualFrame[VisualFrame]
   playbackState --> visualFrame
   trackInfo --> visualFrame
-  monoWindow --> spectrumAnalyzer
+  channelWindowL --> spectrumAnalyzer
+  channelWindowR --> spectrumAnalyzer
   visualFrame --> tuiRenderer
 ```
 
@@ -55,8 +58,8 @@ flowchart LR
   - Streams PCM to output device and tracks playback cursor/state.
   - Exposes pause/resume and analysis window extraction.
 - `SpectrumAnalyzer`
-  - Converts mono windows into spectrum bars, peak-hold hints, waveform points,
-    envelope waveform points, and meter values.
+  - Converts per-channel time windows into spectrum bars, peak-hold hints,
+    waveform points, envelope waveform points, and meter values.
 - `TuiRenderer`
   - Renders panelized terminal layout (header/visual area/playlist/footer).
   - Maps key/mouse input into `UiIntent` events.
@@ -71,7 +74,7 @@ flowchart LR
   - `TrackInfo MetadataReader::ReadTrackInfo(...) const`
   - `AudioEngine::{Load, Start, Pause, Resume, TogglePause, Stop}`
   - `PlaybackState AudioEngine::GetPlaybackState() const`
-  - `std::vector<float> AudioEngine::GetRecentMonoWindow(uint32_t) const`
+  - `std::vector<float> AudioEngine::GetRecentChannelWindow(uint32_t channel_index, uint32_t) const`
 - Analysis interface
   - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
   - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
@@ -163,9 +166,9 @@ sequenceDiagram
     App->>UI: Run(frameProvider, playlistProvider, onIntent, ...)
     loop refreshTick
       UI->>Audio: GetPlaybackState()
-      UI->>Audio: GetRecentMonoWindow(2048)
-      UI->>Analyzer: ComputeBars(monoWindow)
-      UI->>Analyzer: ComputeWaveform(monoWindow, 96)
+      UI->>Audio: GetRecentChannelWindow(0,2048)
+      UI->>Audio: GetRecentChannelWindow(1,2048)
+      UI->>Analyzer: Analyze L/R windows into VisualFrame.left/right
       UI-->>UI: render VisualFrame
     end
     App->>Audio: Stop()
@@ -185,15 +188,15 @@ flowchart LR
   metadataReader --> trackInfo[TrackInfo]
   decodedTrack --> audioEngine[AudioEngine]
   trackInfo --> audioEngine
-  audioEngine --> monoWindow[MonoWindow]
-  monoWindow --> spectrumAnalyzer[SpectrumAnalyzer]
-  spectrumAnalyzer --> spectrumBars[SpectrumBars]
-  spectrumAnalyzer --> waveformPoints[WaveformPoints]
+  audioEngine --> channelWindowL[ChannelWindow_L]
+  audioEngine --> channelWindowR[ChannelWindow_R]
+  channelWindowL --> spectrumAnalyzer[SpectrumAnalyzer]
+  channelWindowR --> spectrumAnalyzer
+  spectrumAnalyzer --> channelVisuals[ChannelVisuals_L_R]
   audioEngine --> playbackState[PlaybackState]
   trackInfo --> visualFrame[VisualFrame]
   playbackState --> visualFrame
-  spectrumBars --> visualFrame
-  waveformPoints --> visualFrame
+  channelVisuals --> visualFrame
   visualFrame --> tuiRenderer[TuiRenderer]
   userInput[KeyboardAndMouseInput] --> tuiRenderer
   tuiRenderer --> uiIntent[UiIntent]
@@ -217,8 +220,9 @@ flowchart LR
 - `DecodedTrack`: interleaved float PCM plus stream format.
 - `TrackInfo`: source and display metadata for active track.
 - `PlaybackState`: elapsed time, duration, and runtime flags.
-- `VisualFrame`: complete UI tick payload, including spectrum peaks, envelope
-  waveform, RMS/Peak levels, band energies, and preferred visual mode.
+- `ChannelVisuals`: per-channel spectrum, waveforms, RMS/Peak, and band meters.
+- `VisualFrame`: complete UI tick payload with `left`/`right` channel visuals
+  plus preferred visual mode.
 
 ## Planned Evolution
 

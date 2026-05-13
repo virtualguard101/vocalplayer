@@ -7,6 +7,19 @@
 
 ### Changed
 
+- 立体声可视化：`AudioEngine::GetRecentChannelWindow` 按声道提取分析窗；
+  `ChannelVisuals` + `VisualFrame::left`/`right` 承载左右独立频谱/波形/仪表；
+  单声道曲目复制声道 0 到两侧。`GetRecentMonoWindow` 已移除。
+- Stereo visualization: per-channel `GetRecentChannelWindow`, `ChannelVisuals`
+  on `VisualFrame.left` / `right`, independent L/R panels; mono duplicates
+  channel 0. Removed `GetRecentMonoWindow`.
+
+### Docs
+
+- 更新 `README.md`、`README_zh-CN.md`、`docs/visual.md`、`docs/visual_zh-CN.md`、
+  `docs/dev/architecture.md`、`docs/dev/architecture_zh-CN.md` 以反映立体声
+  可视化数据流与 `ChannelVisuals` 契约。
+
 - 移除 xmake 构建支持，仅保留 CMake 构建支持。
 
 ### Fixed

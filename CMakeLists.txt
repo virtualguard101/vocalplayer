@@ -12,35 +12,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(VOCALPLAYER_BUILD_TESTS "Build VocalPlayer tests." ON)
 
-include(FetchContent)
+find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h REQUIRED)
+add_library(miniaudio INTERFACE)
+target_include_directories(miniaudio INTERFACE ${MINIAUDIO_INCLUDE_DIR})
 
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(KISSFFT_TEST OFF CACHE BOOL "" FORCE)
-set(KISSFFT_TOOLS OFF CACHE BOOL "" FORCE)
-
-FetchContent_Declare(
-  miniaudio
-  GIT_REPOSITORY https://github.com/mackron/miniaudio.git
-  GIT_TAG 0.11.23)
-FetchContent_MakeAvailable(miniaudio)
-
-FetchContent_Declare(
-  kissfft
-  GIT_REPOSITORY https://github.com/mborgerding/kissfft.git
-  GIT_TAG 131.1.0)
-FetchContent_MakeAvailable(kissfft)
-
-FetchContent_Declare(
-  ftxui
-  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
-  GIT_TAG v5.0.0)
-FetchContent_MakeAvailable(ftxui)
-
-add_library(
-  kissfft_lib
-  STATIC
-  ${kissfft_SOURCE_DIR}/kiss_fft.c)
-target_include_directories(kissfft_lib PUBLIC ${kissfft_SOURCE_DIR})
+find_package(kissfft CONFIG REQUIRED COMPONENTS float)
+find_package(ftxui CONFIG REQUIRED)
 
 find_package(TagLib CONFIG QUIET)
 
@@ -63,14 +40,13 @@ add_library(
 target_include_directories(
   vocalplayer_core
   PUBLIC
-    ${PROJECT_SOURCE_DIR}/src
-    ${miniaudio_SOURCE_DIR}
-    ${kissfft_SOURCE_DIR})
+    ${PROJECT_SOURCE_DIR}/src)
 
 target_link_libraries(
   vocalplayer_core
   PUBLIC
-    kissfft_lib
+    kissfft::kissfft
+    miniaudio
     ftxui::screen
     ftxui::dom
     ftxui::component)
@@ -110,9 +86,8 @@ if(VOCALPLAYER_BUILD_TESTS)
   target_include_directories(
     test_spectrum_analyzer
     PRIVATE
-      ${PROJECT_SOURCE_DIR}/src
-      ${kissfft_SOURCE_DIR})
-  target_link_libraries(test_spectrum_analyzer PRIVATE kissfft_lib)
+      ${PROJECT_SOURCE_DIR}/src)
+  target_link_libraries(test_spectrum_analyzer PRIVATE kissfft::kissfft)
   add_test(NAME spectrum_analyzer_test COMMAND test_spectrum_analyzer)
 
   add_executable(test_playlist tests/test_playlist.cpp src/app/playlist.cpp)

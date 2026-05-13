@@ -11,7 +11,8 @@ quick-check:
     ctest --test-dir build --output-on-failure -R "(playlist_test|keybindings_test)"
 
 bootstrap:
-    cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    vcpkg install
+    cmake --preset vcpkg
     ln -sf build/compile_commands.json compile_commands.json
     pre-commit install
 

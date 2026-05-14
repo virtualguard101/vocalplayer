@@ -37,7 +37,8 @@ flowchart LR
   trackInfo --> visualFrame
   channelWindowL --> spectrumAnalyzer
   channelWindowR --> spectrumAnalyzer
-  visualFrame --> tuiRenderer
+  visualFrame --> visualPipeline[VisualUpdatePipeline]
+  visualPipeline --> tuiRenderer
 ```
 
 ## 时序图（单曲播放）
@@ -52,6 +53,7 @@ sequenceDiagram
   participant Metadata as 元数据读取器MetadataReader
   participant Audio as 音频引擎AudioEngine
   participant Analyzer as 频谱分析器SpectrumAnalyzer
+  participant Pipe as VisualUpdatePipeline
   participant UI as 界面渲染器TuiRenderer
 
   User->>Main: 运行 vocalplayer inputPath
@@ -66,12 +68,11 @@ sequenceDiagram
     App->>Audio: Load(decodedTrack, trackInfo)
     App->>Audio: Start()
     App->>UI: Run(frameProvider, shouldStop)
-    loop 每帧刷新
-      UI->>Audio: GetPlaybackState()
-      UI->>Audio: GetRecentChannelWindow(0,2048)
-      UI->>Audio: GetRecentChannelWindow(1,2048)
-      UI->>Analyzer: 分析左右声道窗口写入 VisualFrame.left/right
-      UI-->>UI: 渲染 VisualFrame
+    loop 可视化刷新
+      Pipe->>Audio: frame_provider 读取 PCM 窗口与播放状态
+      Pipe->>Analyzer: 双声道分析写入 VisualFrame
+      Pipe->>Pipe: 发布快照并合并 Post 唤醒 UI
+      UI->>UI: 每帧绘制拷贝 VisualFrame 并调用 playlist_provider
     end
     App->>Audio: Stop()
   end
@@ -149,6 +150,14 @@ flowchart TB
 - `TuiRenderer`
   - 以面板化布局渲染终端界面（顶栏/主可视化区/播放列表/底栏）。
   - 将键鼠输入转换为 `UiIntent`。
+  - 每次绘制时于主线程调用 `playlist_provider()` 刷新播放列表视图，并从
+    `VisualUpdatePipeline` 拷贝最新 `VisualFrame`。
+- `VisualUpdatePipeline`
+  - 在工作线程执行 `frame_provider`，互斥发布快照，并向 `ScreenInteractive`
+    发送合并后的重绘请求（`Post(Closure)` + `RequestAnimationFrame`）。
+  - 当单帧分析耗时超过阈值时增加退让睡眠，减轻 CPU 积压。
+- `CoalescingRedrawGate`
+  - 保证在未 flush 前最多只排队一次重绘唤醒（供 `VisualUpdatePipeline` 使用）。
 
 ## 接口清单
 
@@ -169,6 +178,8 @@ flowchart TB
   - `std::vector<float> SpectrumAnalyzer::ComputeBandEnergies(...) const`
 - 表现层接口
   - `void TuiRenderer::Run(...)`
+  - `VisualUpdatePipeline`（每次 `Run` 会话内构造；工作线程 + 合并重绘）
+  - `CoalescingRedrawGate`（最多一次挂起重绘直至 flush）
   - `UiIntent`（播放与导航意图枚举）
   - `Keybindings` + `DefaultKeybindings()`（键位映射入口）
   - `ThemeId` / `Theme`（内置主题与配色约定）
@@ -194,7 +205,8 @@ flowchart LR
   trackInfo --> visualFrame[VisualFrame]
   playbackState --> visualFrame
   channelVisuals --> visualFrame
-  visualFrame --> tuiRenderer[TuiRenderer]
+  visualFrame --> visualPipeline[VisualUpdatePipeline]
+  visualPipeline --> tuiRenderer[TuiRenderer]
   userInput[键盘与鼠标输入] --> tuiRenderer
   tuiRenderer --> uiIntent[UiIntent]
   uiIntent --> appController[AppControllerStateMachine]
@@ -204,7 +216,8 @@ flowchart LR
 ## 运行时数据流说明
 
 - 渲染链路保持单向：
-  `AudioEngine -> SpectrumAnalyzer -> VisualFrame -> TuiRenderer`。
+  `AudioEngine -> SpectrumAnalyzer -> VisualFrame`（由 `VisualUpdatePipeline` 工作线程
+  周期性构建并发布），`TuiRenderer` 在每帧绘制时拷贝最新快照并调用 `playlist_provider()`。
 - 控制链路反向回传：
   `用户输入 -> TuiRenderer -> UiIntent -> AppController`。
 - `VisualFrame` 作为每帧不可变快照，降低模块耦合，利于后续 Rust 迁移。

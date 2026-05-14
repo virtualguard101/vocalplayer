@@ -6,6 +6,8 @@
  * - Builds spectrum, waveform, progress, and playlist visual blocks.
  * - Tracks playlist viewport and selection-follow behavior.
  * - Converts keyboard/mouse events into high-level UiIntent callbacks.
+ * - Drives VisualUpdatePipeline for off-thread analysis and coalesced redraw
+ *   wakeups (avoids flooding FTXUI with Event::Custom).
  */
 #include "ui/tui_renderer.hpp"
 
@@ -16,7 +18,6 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "ftxui/component/component.hpp"
@@ -25,6 +26,7 @@
 #include "ftxui/component/screen_interactive.hpp"
 #include "ftxui/dom/elements.hpp"
 #include "ui/theme.hpp"
+#include "ui/visual_update_pipeline.hpp"
 
 namespace vocalplayer {
 namespace {
@@ -353,9 +355,7 @@ void TuiRenderer::Run(
     const std::function<void(UiIntent)>& on_intent,
     const std::function<void(int)>& on_selection_changed,
     const std::function<bool()>& should_stop, UiSessionState* session_state) {
-  VisualFrame latest_frame = frame_provider();
   PlaylistViewModel latest_playlist = playlist_provider();
-  std::atomic<bool> keep_running = true;
   Keybindings keybindings = DefaultKeybindings();
   ThemeId active_theme_id = ThemeId::kDefault;
   VisualMode active_visual_mode = VisualMode::kOverview;
@@ -367,6 +367,12 @@ void TuiRenderer::Run(
   }
 
   auto screen = ScreenInteractive::Fullscreen();
+  VisualUpdatePipeline visual_pipeline(&screen, frame_provider, should_stop,
+                                       std::chrono::milliseconds(33),
+                                       std::chrono::milliseconds(50));
+  visual_pipeline.Prime();
+  VisualFrame latest_frame;
+  visual_pipeline.CopyLatestFrame(&latest_frame);
   int track_count = static_cast<int>(latest_playlist.tracks.size());
   int initial_selected = 0;
   if (track_count > 0) {
@@ -406,11 +412,32 @@ void TuiRenderer::Run(
     int next_selected = selected_index.load();
     on_selection_changed(next_selected);
     on_intent(UiIntent::kPlaySelectedTrack);
-    keep_running.store(false);
     screen.ExitLoopClosure()();
   };
 
   auto component = Renderer([&] {
+    if (!visual_pipeline.IsStarted()) {
+      visual_pipeline.Start();
+    }
+    visual_pipeline.CopyLatestFrame(&latest_frame);
+    int previous_selected = selected_index.load();
+    latest_playlist = playlist_provider();
+    selected_index.store(latest_playlist.selected_track_index);
+    int current_selected = selected_index.load();
+    if (current_selected != previous_selected) {
+      int next_offset = FollowSelectedOffset(
+          current_selected, view_offset.load(), kPlaylistVisibleRows);
+      next_offset = ClampOffset(next_offset,
+                                static_cast<int>(latest_playlist.tracks.size()),
+                                kPlaylistVisibleRows);
+      view_offset.store(next_offset);
+    } else {
+      int next_offset = ClampOffset(
+          view_offset.load(), static_cast<int>(latest_playlist.tracks.size()),
+          kPlaylistVisibleRows);
+      view_offset.store(next_offset);
+    }
+
     const Theme& theme = GetBuiltinTheme(active_theme_id);
     const PlaybackState& state = latest_frame.playback_state;
     float ratio = 0.0f;
@@ -495,19 +522,16 @@ void TuiRenderer::Run(
   component |= CatchEvent([&](Event event) {
     if (event == Event::Character(keybindings.quit)) {
       on_intent(UiIntent::kQuit);
-      keep_running.store(false);
       screen.ExitLoopClosure()();
       return true;
     }
     if (event == Event::Character(keybindings.previous_track)) {
       on_intent(UiIntent::kPreviousTrack);
-      keep_running.store(false);
       screen.ExitLoopClosure()();
       return true;
     }
     if (event == Event::Character(keybindings.next_track)) {
       on_intent(UiIntent::kNextTrack);
-      keep_running.store(false);
       screen.ExitLoopClosure()();
       return true;
     }
@@ -584,41 +608,8 @@ void TuiRenderer::Run(
     return false;
   });
 
-  std::thread refresh_thread([&] {
-    while (keep_running.load()) {
-      latest_frame = frame_provider();
-      int previous_selected = selected_index.load();
-      latest_playlist = playlist_provider();
-      selected_index.store(latest_playlist.selected_track_index);
-      int current_selected = selected_index.load();
-      if (current_selected != previous_selected) {
-        int next_offset = FollowSelectedOffset(
-            current_selected, view_offset.load(), kPlaylistVisibleRows);
-        next_offset = ClampOffset(
-            next_offset, static_cast<int>(latest_playlist.tracks.size()),
-            kPlaylistVisibleRows);
-        view_offset.store(next_offset);
-      } else {
-        int next_offset = ClampOffset(
-            view_offset.load(), static_cast<int>(latest_playlist.tracks.size()),
-            kPlaylistVisibleRows);
-        view_offset.store(next_offset);
-      }
-      if (should_stop()) {
-        keep_running.store(false);
-        screen.ExitLoopClosure()();
-        return;
-      }
-      screen.PostEvent(Event::Custom);
-      std::this_thread::sleep_for(std::chrono::milliseconds(33));
-    }
-  });
-
   screen.Loop(component);
-  keep_running.store(false);
-  if (refresh_thread.joinable()) {
-    refresh_thread.join();
-  }
+  visual_pipeline.Stop();
   if (session_state != nullptr) {
     session_state->theme_id = active_theme_id;
     session_state->visual_mode = active_visual_mode;

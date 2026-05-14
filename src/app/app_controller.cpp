@@ -59,6 +59,36 @@ void FillChannelVisuals(SpectrumAnalyzer& analyzer, ChannelVisuals& out,
   out.band_energies = analyzer.ComputeBandEnergies(window, band_energy_count);
 }
 
+/**
+ * @brief Build one visualization snapshot from the current playback cursor.
+ *
+ * @param engine Active audio engine for PCM windows and playback metadata.
+ * @param analyzer Shared spectrum analyzer instance.
+ * @param peaks_l Mutable peak-hold state for the left channel spectrum.
+ * @param peaks_r Mutable peak-hold state for the right channel spectrum.
+ * @return Populated VisualFrame for the UI pipeline.
+ */
+VisualFrame BuildPlaybackVisualFrame(AudioEngine& engine,
+                                     SpectrumAnalyzer& analyzer,
+                                     std::vector<float>& peaks_l,
+                                     std::vector<float>& peaks_r) {
+  VisualFrame frame;
+  frame.track_info = engine.GetTrackInfo();
+  frame.playback_state = engine.GetPlaybackState();
+  std::vector<float> window_l =
+      engine.GetRecentChannelWindow(0, kAnalysisWindowSize);
+  std::vector<float> window_r =
+      (frame.track_info.channels >= 2)
+          ? engine.GetRecentChannelWindow(1, kAnalysisWindowSize)
+          : window_l;
+  FillChannelVisuals(analyzer, frame.left, window_l, peaks_l,
+                     kWaveformPointCount, kBandEnergyCount, kPeakDecayPerFrame);
+  FillChannelVisuals(analyzer, frame.right, window_r, peaks_r,
+                     kWaveformPointCount, kBandEnergyCount, kPeakDecayPerFrame);
+  frame.visual_mode = VisualMode::kOverview;
+  return frame;
+}
+
 // Convert filesystem path to UTF-8 text for terminal rendering.
 std::string ToUtf8String(const std::filesystem::path& path) {
   std::u8string utf8 = path.u8string();
@@ -130,26 +160,9 @@ int AppController::Run(const std::string& input_path) {
         // frame provider, playlist provider, intent handler,
         // selection sync, and stop predicate.
         tui_renderer_.Run(
-            // Build the latest visualization frame for each render tick.
             [&] {
-              VisualFrame frame;
-              frame.track_info = audio_engine_.GetTrackInfo();
-              frame.playback_state = audio_engine_.GetPlaybackState();
-              std::vector<float> window_l =
-                  audio_engine_.GetRecentChannelWindow(0, kAnalysisWindowSize);
-              std::vector<float> window_r =
-                  (frame.track_info.channels >= 2)
-                      ? audio_engine_.GetRecentChannelWindow(
-                            1, kAnalysisWindowSize)
-                      : window_l;
-              FillChannelVisuals(analyzer_, frame.left, window_l,
-                                 spectrum_peaks_l, kWaveformPointCount,
-                                 kBandEnergyCount, kPeakDecayPerFrame);
-              FillChannelVisuals(analyzer_, frame.right, window_r,
-                                 spectrum_peaks_r, kWaveformPointCount,
-                                 kBandEnergyCount, kPeakDecayPerFrame);
-              frame.visual_mode = VisualMode::kOverview;
-              return frame;
+              return BuildPlaybackVisualFrame(
+                  audio_engine_, analyzer_, spectrum_peaks_l, spectrum_peaks_r);
             },
             // Build the playlist view model (tracks/current/selection).
             [&] {
@@ -201,8 +214,7 @@ int AppController::Run(const std::string& input_path) {
             &ui_session_state);
       } catch (const std::exception& ex) {
         audio_engine_.Stop();
-        std::cerr << "Warning: skip track due to error: " << ex.what()
-                  << std::endl;
+        std::cerr << "Warning: skip track due to error: " << ex.what() << '\n';
         current_index += 1;
         continue;
       }
@@ -234,7 +246,7 @@ int AppController::Run(const std::string& input_path) {
 
     return 0;
   } catch (const std::exception& ex) {
-    std::cerr << "Error: " << ex.what() << std::endl;
+    std::cerr << "Error: " << ex.what() << '\n';
     return 1;
   }
 }

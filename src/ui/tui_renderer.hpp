@@ -5,7 +5,8 @@
  * Key points:
  * - Defines UiIntent and PlaylistViewModel for controller/UI boundaries.
  * - Exposes TuiRenderer::Run() for one interactive session lifecycle.
- * - Centralizes rendering and input callback interfaces.
+ * - Uses VisualUpdatePipeline for worker-thread frame production and coalesced
+ *   FTXUI redraw scheduling; playlist_provider runs on the main draw path.
  */
 #ifndef VOCALPLAYER_SRC_UI_TUI_RENDERER_HPP_
 #define VOCALPLAYER_SRC_UI_TUI_RENDERER_HPP_
@@ -71,7 +72,9 @@ class TuiRenderer {
   /**
    * @brief Run one interactive rendering session.
    *
-   * @param frame_provider Supplies latest visual/audio frame.
+   * @param frame_provider Supplies visual/audio frame snapshots; invoked from a
+   *        dedicated worker thread inside this session (see
+   * VisualUpdatePipeline).
    * @param playlist_provider Supplies latest playlist view model.
    * @param on_intent Callback for high-level playback intents.
    * @param on_selection_changed Callback for playlist cursor updates.

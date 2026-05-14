@@ -5,21 +5,28 @@
 
 ## [Unreleased] - 2026-05-13
 
+### Fixed
+
+- TUI 刷新路径：引入 `VisualUpdatePipeline` 在后台线程生成 `VisualFrame`，通过
+  `CoalescingRedrawGate` 合并唤醒，使用 `Post(Closure)` + `RequestAnimationFrame()`
+  替代高频 `PostEvent(Event::Custom)`，减轻与 FTXUI 内置定时任务共享队列时的积压，
+  改善锁屏/解锁后可视化卡顿与时间显示迟滞。
+- TUI refresh: `VisualUpdatePipeline` publishes frames from a worker thread and
+  coalesces redraw wakeups (`Post` + `RequestAnimationFrame`) instead of
+  per-tick `Event::Custom`, reducing FTXUI task-queue backlog after screen lock.
+
 ### Changed
 
 - 立体声可视化：`AudioEngine::GetRecentChannelWindow` 按声道提取分析窗；
   `ChannelVisuals` + `VisualFrame::left`/`right` 承载左右独立频谱/波形/仪表；
   单声道曲目复制声道 0 到两侧。`GetRecentMonoWindow` 已移除。
-- Stereo visualization: per-channel `GetRecentChannelWindow`, `ChannelVisuals`
-  on `VisualFrame.left` / `right`, independent L/R panels; mono duplicates
-  channel 0. Removed `GetRecentMonoWindow`.
 
 ### Docs
 
 - 更新 `README.md`、`README_zh-CN.md`、`docs/visual.md`、`docs/visual_zh-CN.md`、
   `docs/dev/architecture.md`、`docs/dev/architecture_zh-CN.md` 以反映立体声
   可视化数据流与 `ChannelVisuals` 契约。
-
+- 架构文档补充 `VisualUpdatePipeline` / `CoalescingRedrawGate` 与合并重绘策略说明。
 - 移除 xmake 构建支持，仅保留 CMake 构建支持。
 
 ### Fixed
@@ -33,6 +40,8 @@
 
 ### DevEx
 
+- 新增 `coalescing_redraw_gate_test`（`tests/test_coalescing_redraw_gate.cpp`）。
+- Added `coalescing_redraw_gate_test` (`tests/test_coalescing_redraw_gate.cpp`).
 - 新增 MinGW-w64 交叉编译工具链 `cmake/toolchains/mingw-w64-x86_64.cmake`，
   静态链接 MinGW 运行时，产物为单文件可分发的 `vocalplayer.exe`。
 - 新增一键交叉编译脚本 `scripts/build-windows.sh`，自动检测

@@ -9,8 +9,9 @@
 
 - 输入：支持单个音频文件或音频目录。
 - 播放：通过 miniaudio 执行本地解码缓冲播放。
-- 可视化：通过 FTXUI 实现频谱柱（含峰值保持）与双模式波形渲染。
-- 仪表：支持 RMS/Peak 与低中高频段能量显示。
+- 可视化：通过 FTXUI 实现频谱柱（含峰值保持）与双模式波形渲染；左右声道
+  独立分析（单声道复制声道 0）。
+- 仪表：左右声道分别显示 RMS/Peak 与低中高频段能量。
 - 元数据：优先通过 TagLib 读取标题与艺术家（可选），并提供回退策略。
 - 交互：支持 `h/l`、`j/k`、`Space`、`Enter` 及鼠标选择/滚轮滚动。
 - 模式：支持 `m` 切换可视化布局、`v` 切换波形样式、`t` 切换主题。
@@ -29,12 +30,15 @@ flowchart LR
   decoder --> decodedTrack[DecodedTrack]
   metadataReader --> trackInfo[TrackInfo]
   audioEngine --> playbackState[PlaybackState]
-  audioEngine --> monoWindow[MonoWindow]
+  audioEngine --> channelWindowL[ChannelWindow_L]
+  audioEngine --> channelWindowR[ChannelWindow_R]
   spectrumAnalyzer --> visualFrame[VisualFrame]
   playbackState --> visualFrame
   trackInfo --> visualFrame
-  monoWindow --> spectrumAnalyzer
-  visualFrame --> tuiRenderer
+  channelWindowL --> spectrumAnalyzer
+  channelWindowR --> spectrumAnalyzer
+  visualFrame --> visualPipeline[VisualUpdatePipeline]
+  visualPipeline --> tuiRenderer
 ```
 
 ## 时序图（单曲播放）
@@ -49,6 +53,7 @@ sequenceDiagram
   participant Metadata as 元数据读取器MetadataReader
   participant Audio as 音频引擎AudioEngine
   participant Analyzer as 频谱分析器SpectrumAnalyzer
+  participant Pipe as VisualUpdatePipeline
   participant UI as 界面渲染器TuiRenderer
 
   User->>Main: 运行 vocalplayer inputPath
@@ -63,12 +68,11 @@ sequenceDiagram
     App->>Audio: Load(decodedTrack, trackInfo)
     App->>Audio: Start()
     App->>UI: Run(frameProvider, shouldStop)
-    loop 每帧刷新
-      UI->>Audio: GetPlaybackState()
-      UI->>Audio: GetRecentMonoWindow(2048)
-      UI->>Analyzer: ComputeBars(monoWindow)
-      UI->>Analyzer: ComputeWaveform(monoWindow, 96)
-      UI-->>UI: 渲染 VisualFrame
+    loop 可视化刷新
+      Pipe->>Audio: frame_provider 读取 PCM 窗口与播放状态
+      Pipe->>Analyzer: 双声道分析写入 VisualFrame
+      Pipe->>Pipe: 发布快照并合并 Post 唤醒 UI
+      UI->>UI: 每帧绘制拷贝 VisualFrame 并调用 playlist_provider
     end
     App->>Audio: Stop()
   end
@@ -142,10 +146,18 @@ flowchart TB
   - 驱动音频输出设备并维护播放游标/状态。
   - 提供暂停恢复与分析窗口提取能力。
 - `SpectrumAnalyzer`
-  - 将单声道窗口转换为频谱柱、峰值保持提示、波形点、包络波形和仪表指标。
+  - 将各声道时域窗口转换为频谱柱、峰值提示、波形点、包络波形与仪表指标。
 - `TuiRenderer`
   - 以面板化布局渲染终端界面（顶栏/主可视化区/播放列表/底栏）。
   - 将键鼠输入转换为 `UiIntent`。
+  - 每次绘制时于主线程调用 `playlist_provider()` 刷新播放列表视图，并从
+    `VisualUpdatePipeline` 拷贝最新 `VisualFrame`。
+- `VisualUpdatePipeline`
+  - 在工作线程执行 `frame_provider`，互斥发布快照，并向 `ScreenInteractive`
+    发送合并后的重绘请求（`Post(Closure)` + `RequestAnimationFrame`）。
+  - 当单帧分析耗时超过阈值时增加退让睡眠，减轻 CPU 积压。
+- `CoalescingRedrawGate`
+  - 保证在未 flush 前最多只排队一次重绘唤醒（供 `VisualUpdatePipeline` 使用）。
 
 ## 接口清单
 
@@ -157,7 +169,7 @@ flowchart TB
   - `TrackInfo MetadataReader::ReadTrackInfo(...) const`
   - `AudioEngine::{Load, Start, Pause, Resume, TogglePause, Stop}`
   - `PlaybackState AudioEngine::GetPlaybackState() const`
-  - `std::vector<float> AudioEngine::GetRecentMonoWindow(uint32_t) const`
+  - `std::vector<float> AudioEngine::GetRecentChannelWindow(uint32_t channel_index, uint32_t) const`
 - 分析层接口
   - `std::vector<float> SpectrumAnalyzer::ComputeBars(...)`
   - `std::vector<float> SpectrumAnalyzer::ComputeWaveform(...) const`
@@ -166,6 +178,8 @@ flowchart TB
   - `std::vector<float> SpectrumAnalyzer::ComputeBandEnergies(...) const`
 - 表现层接口
   - `void TuiRenderer::Run(...)`
+  - `VisualUpdatePipeline`（每次 `Run` 会话内构造；工作线程 + 合并重绘）
+  - `CoalescingRedrawGate`（最多一次挂起重绘直至 flush）
   - `UiIntent`（播放与导航意图枚举）
   - `Keybindings` + `DefaultKeybindings()`（键位映射入口）
   - `ThemeId` / `Theme`（内置主题与配色约定）
@@ -182,16 +196,17 @@ flowchart LR
   metadataReader --> trackInfo[TrackInfo]
   decodedTrack --> audioEngine[AudioEngine]
   trackInfo --> audioEngine
-  audioEngine --> monoWindow[MonoWindow]
-  monoWindow --> spectrumAnalyzer[SpectrumAnalyzer]
-  spectrumAnalyzer --> spectrumBars[SpectrumBars]
-  spectrumAnalyzer --> waveformPoints[WaveformPoints]
+  audioEngine --> channelWindowL[ChannelWindow_L]
+  audioEngine --> channelWindowR[ChannelWindow_R]
+  channelWindowL --> spectrumAnalyzer[SpectrumAnalyzer]
+  channelWindowR --> spectrumAnalyzer
+  spectrumAnalyzer --> channelVisuals[ChannelVisuals_LR]
   audioEngine --> playbackState[PlaybackState]
   trackInfo --> visualFrame[VisualFrame]
   playbackState --> visualFrame
-  spectrumBars --> visualFrame
-  waveformPoints --> visualFrame
-  visualFrame --> tuiRenderer[TuiRenderer]
+  channelVisuals --> visualFrame
+  visualFrame --> visualPipeline[VisualUpdatePipeline]
+  visualPipeline --> tuiRenderer[TuiRenderer]
   userInput[键盘与鼠标输入] --> tuiRenderer
   tuiRenderer --> uiIntent[UiIntent]
   uiIntent --> appController[AppControllerStateMachine]
@@ -201,7 +216,8 @@ flowchart LR
 ## 运行时数据流说明
 
 - 渲染链路保持单向：
-  `AudioEngine -> SpectrumAnalyzer -> VisualFrame -> TuiRenderer`。
+  `AudioEngine -> SpectrumAnalyzer -> VisualFrame`（由 `VisualUpdatePipeline` 工作线程
+  周期性构建并发布），`TuiRenderer` 在每帧绘制时拷贝最新快照并调用 `playlist_provider()`。
 - 控制链路反向回传：
   `用户输入 -> TuiRenderer -> UiIntent -> AppController`。
 - `VisualFrame` 作为每帧不可变快照，降低模块耦合，利于后续 Rust 迁移。
@@ -212,7 +228,9 @@ flowchart LR
 - `DecodedTrack`：交错存储的浮点采样与流格式信息。
 - `TrackInfo`：来源路径、标题、艺术家、时长和采样相关元信息。
 - `PlaybackState`：已播放时间、总时长及运行态标记。
-- `VisualFrame`：每个刷新周期生成的 UI 只读快照，包含频谱峰值、包络波形、RMS/Peak 和频段能量等扩展字段。
+- `ChannelVisuals`：单侧频谱、波形、RMS/Peak 与频段能量等可视化快照。
+- `VisualFrame`：每个刷新周期的 UI 只读快照，包含 `left`/`right` 两组
+  `ChannelVisuals` 与首选可视化模式。
 
 这种“数据契约优先”的设计，使后续迁移到 Rust 时可以在保持边界稳定的前提下，
 替换具体模块实现。

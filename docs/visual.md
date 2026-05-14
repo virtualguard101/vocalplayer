@@ -4,6 +4,13 @@ This document describes the audio features currently visualized by VocalPlayer,
 plus a quick-reference table for how they typically change across sections in
 the same song.
 
+## Channel layout
+
+Metrics below are stored per side on `VisualFrame.left` and `VisualFrame.right`
+(each a `ChannelVisuals`). Stereo PCM uses interleaved channels **0** and **1**
+for L/R. Mono sources reuse channel **0** for both sides so layouts stay
+symmetric.
+
 ## Currently Visualized Metrics
 
 ### 1) Spectrum Bars (`spectrum_bars`)

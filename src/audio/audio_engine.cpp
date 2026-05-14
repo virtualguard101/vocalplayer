@@ -6,7 +6,7 @@
  * - Owns decoded PCM buffers and playback metadata for one active track.
  * - Bridges miniaudio callback thread to engine state via DataCallback().
  * - Resets playback cursor/flags on Load() and rebuilds device configuration.
- * - Exposes playback snapshots and recent mono windows for UI/analyzers.
+ * - Exposes playback snapshots and recent per-channel windows for analyzers.
  */
 
 #include "audio/audio_engine.hpp"
@@ -136,12 +136,13 @@ PlaybackState AudioEngine::GetPlaybackState() const {
   return state;
 }
 
-// Extract a recent mono window for spectrum and waveform analysis.
-std::vector<float> AudioEngine::GetRecentMonoWindow(
-    uint32_t window_size) const {
-  std::vector<float> mono_window(window_size, 0.0f);
-  if (decoded_track_.frame_count == 0 || decoded_track_.channels == 0) {
-    return mono_window;
+// Extract a recent single-channel window for spectrum and waveform analysis.
+std::vector<float> AudioEngine::GetRecentChannelWindow(
+    uint32_t channel_index, uint32_t window_size) const {
+  std::vector<float> channel_window(window_size, 0.0f);
+  if (decoded_track_.frame_count == 0 || decoded_track_.channels == 0 ||
+      channel_index >= decoded_track_.channels) {
+    return channel_window;
   }
 
   uint64_t current_frame = current_frame_.load();
@@ -151,24 +152,19 @@ std::vector<float> AudioEngine::GetRecentMonoWindow(
       current_frame > start_frame ? current_frame - start_frame : 0;
   uint64_t copy_frames = std::min<uint64_t>(window_size, available);
 
-  // Traverse the frames and calculate the average of the multiple channels
-  // samples.
+  const uint32_t channels = decoded_track_.channels;
   for (uint64_t i = 0; i < copy_frames; ++i) {
     uint64_t frame_index = start_frame + i;
     if (frame_index >= decoded_track_.frame_count) {
       break;
     }
-    float sum = 0.0f;
-    for (uint32_t ch = 0; ch < decoded_track_.channels; ++ch) {
-      uint64_t sample_index = frame_index * decoded_track_.channels + ch;
-      sum += decoded_track_.interleaved_samples[sample_index];
-    }
-    // Write result of the average of the multiple channels samples to the mono
-    // window.
-    mono_window[window_size - copy_frames + i] =
-        sum / static_cast<float>(decoded_track_.channels);
+    const uint64_t sample_index =
+        frame_index * static_cast<uint64_t>(channels) +
+        static_cast<uint64_t>(channel_index);
+    channel_window[window_size - copy_frames + i] =
+        decoded_track_.interleaved_samples[sample_index];
   }
-  return mono_window;
+  return channel_window;
 }
 
 // Static callback bridge for miniaudio device thread.

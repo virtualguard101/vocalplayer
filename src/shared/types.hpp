@@ -5,7 +5,7 @@
  * Key points:
  * - Centralizes track metadata and playback snapshot structures.
  * - Defines DecodedTrack as the PCM transport object between modules.
- * - Defines VisualFrame as the renderer-facing aggregate view model.
+ * - Defines ChannelVisuals and VisualFrame as the renderer-facing view models.
  */
 #ifndef VOCALPLAYER_SRC_SHARED_TYPES_HPP_
 #define VOCALPLAYER_SRC_SHARED_TYPES_HPP_
@@ -63,6 +63,26 @@ enum class VisualMode {
 };
 
 /**
+ * @brief Per-channel visualization snapshot for one stereo side.
+ */
+struct ChannelVisuals {
+  /// Spectrum bar amplitudes in [0, 1].
+  std::vector<float> spectrum_bars;
+  /// Peak-hold spectrum marker values in [0, 1].
+  std::vector<float> spectrum_peak_bars;
+  /// Waveform points in [0, 1].
+  std::vector<float> waveform_points;
+  /// Envelope waveform points in [0, 1].
+  std::vector<float> waveform_envelope_points;
+  /// Root-mean-square level in [0, 1].
+  float rms_level = 0.0f;
+  /// Peak level in [0, 1].
+  float peak_level = 0.0f;
+  /// Coarse band energies in [0, 1].
+  std::vector<float> band_energies;
+};
+
+/**
  * @brief Fully decoded interleaved PCM buffer.
  */
 struct DecodedTrack {
@@ -84,20 +104,10 @@ struct VisualFrame {
   TrackInfo track_info;
   /// Playback status for current frame.
   PlaybackState playback_state;
-  /// Spectrum bar amplitudes in [0, 1].
-  std::vector<float> spectrum_bars;
-  /// Peak-hold spectrum marker values in [0, 1].
-  std::vector<float> spectrum_peak_bars;
-  /// Waveform points in [0, 1].
-  std::vector<float> waveform_points;
-  /// Envelope waveform points in [0, 1].
-  std::vector<float> waveform_envelope_points;
-  /// Root-mean-square level in [0, 1].
-  float rms_level = 0.0f;
-  /// Peak level in [0, 1].
-  float peak_level = 0.0f;
-  /// Coarse band energies in [0, 1].
-  std::vector<float> band_energies;
+  /// Left-channel (or mono duplicate) visualization.
+  ChannelVisuals left;
+  /// Right-channel (or mono duplicate) visualization.
+  ChannelVisuals right;
   /// Preferred visualization mode (renderer may override by local user action).
   VisualMode visual_mode = VisualMode::kOverview;
 };

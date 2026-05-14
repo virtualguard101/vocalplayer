@@ -25,6 +25,70 @@ constexpr uint32_t kWaveformPointCount = 96;
 constexpr uint32_t kBandEnergyCount = 3;
 constexpr float kPeakDecayPerFrame = 0.035f;
 
+/**
+ * @brief Run spectrum/waveform analysis for one channel window.
+ *
+ * @param analyzer Analyzer instance shared across channels.
+ * @param out Per-channel output fields to populate.
+ * @param window Time-domain samples for this channel.
+ * @param spectrum_peaks Mutable peak-hold state for this channel.
+ * @param waveform_point_count Waveform decimation target.
+ * @param band_energy_count Number of coarse band energy bins.
+ * @param peak_decay Per-frame decay applied to held spectrum peaks.
+ */
+void FillChannelVisuals(SpectrumAnalyzer& analyzer, ChannelVisuals& out,
+                        const std::vector<float>& window,
+                        std::vector<float>& spectrum_peaks,
+                        uint32_t waveform_point_count,
+                        uint32_t band_energy_count, float peak_decay) {
+  out.spectrum_bars = analyzer.ComputeBars(window);
+  if (spectrum_peaks.size() != out.spectrum_bars.size()) {
+    spectrum_peaks.assign(out.spectrum_bars.size(), 0.0f);
+  }
+  for (size_t i = 0; i < out.spectrum_bars.size(); ++i) {
+    const float decayed_peak = std::max(0.0f, spectrum_peaks[i] - peak_decay);
+    spectrum_peaks[i] = std::max(out.spectrum_bars[i], decayed_peak);
+  }
+  out.spectrum_peak_bars = spectrum_peaks;
+  out.waveform_points = analyzer.ComputeWaveform(window, waveform_point_count);
+  out.waveform_envelope_points =
+      analyzer.ComputeWaveformEnvelope(window, waveform_point_count);
+  const AudioLevels levels = analyzer.ComputeLevels(window);
+  out.rms_level = levels.rms_level;
+  out.peak_level = levels.peak_level;
+  out.band_energies = analyzer.ComputeBandEnergies(window, band_energy_count);
+}
+
+/**
+ * @brief Build one visualization snapshot from the current playback cursor.
+ *
+ * @param engine Active audio engine for PCM windows and playback metadata.
+ * @param analyzer Shared spectrum analyzer instance.
+ * @param peaks_l Mutable peak-hold state for the left channel spectrum.
+ * @param peaks_r Mutable peak-hold state for the right channel spectrum.
+ * @return Populated VisualFrame for the UI pipeline.
+ */
+VisualFrame BuildPlaybackVisualFrame(AudioEngine& engine,
+                                     SpectrumAnalyzer& analyzer,
+                                     std::vector<float>& peaks_l,
+                                     std::vector<float>& peaks_r) {
+  VisualFrame frame;
+  frame.track_info = engine.GetTrackInfo();
+  frame.playback_state = engine.GetPlaybackState();
+  std::vector<float> window_l =
+      engine.GetRecentChannelWindow(0, kAnalysisWindowSize);
+  std::vector<float> window_r =
+      (frame.track_info.channels >= 2)
+          ? engine.GetRecentChannelWindow(1, kAnalysisWindowSize)
+          : window_l;
+  FillChannelVisuals(analyzer, frame.left, window_l, peaks_l,
+                     kWaveformPointCount, kBandEnergyCount, kPeakDecayPerFrame);
+  FillChannelVisuals(analyzer, frame.right, window_r, peaks_r,
+                     kWaveformPointCount, kBandEnergyCount, kPeakDecayPerFrame);
+  frame.visual_mode = VisualMode::kOverview;
+  return frame;
+}
+
 // Convert filesystem path to UTF-8 text for terminal rendering.
 std::string ToUtf8String(const std::filesystem::path& path) {
   std::u8string utf8 = path.u8string();
@@ -73,7 +137,8 @@ int AppController::Run(const std::string& input_path) {
       std::atomic<int> requested_index{current_index};
       std::atomic<bool> switch_requested{false};
       std::atomic<bool> exit_requested{false};
-      std::vector<float> spectrum_peaks(48, 0.0f);
+      std::vector<float> spectrum_peaks_l;
+      std::vector<float> spectrum_peaks_r;
 
       // Singal track playback process
       try {
@@ -95,36 +160,9 @@ int AppController::Run(const std::string& input_path) {
         // frame provider, playlist provider, intent handler,
         // selection sync, and stop predicate.
         tui_renderer_.Run(
-            // Build the latest visualization frame for each render tick.
             [&] {
-              VisualFrame frame;
-              frame.track_info = audio_engine_.GetTrackInfo();
-              frame.playback_state = audio_engine_.GetPlaybackState();
-              std::vector<float> window =
-                  audio_engine_.GetRecentMonoWindow(kAnalysisWindowSize);
-              frame.spectrum_bars = analyzer_.ComputeBars(window);
-              if (spectrum_peaks.size() != frame.spectrum_bars.size()) {
-                spectrum_peaks.assign(frame.spectrum_bars.size(), 0.0f);
-              }
-              for (size_t i = 0; i < frame.spectrum_bars.size(); ++i) {
-                const float decayed_peak =
-                    std::max(0.0f, spectrum_peaks[i] - kPeakDecayPerFrame);
-                spectrum_peaks[i] =
-                    std::max(frame.spectrum_bars[i], decayed_peak);
-              }
-              frame.spectrum_peak_bars = spectrum_peaks;
-              frame.waveform_points =
-                  analyzer_.ComputeWaveform(window, kWaveformPointCount);
-              frame.waveform_envelope_points =
-                  analyzer_.ComputeWaveformEnvelope(window,
-                                                    kWaveformPointCount);
-              const AudioLevels levels = analyzer_.ComputeLevels(window);
-              frame.rms_level = levels.rms_level;
-              frame.peak_level = levels.peak_level;
-              frame.band_energies =
-                  analyzer_.ComputeBandEnergies(window, kBandEnergyCount);
-              frame.visual_mode = VisualMode::kOverview;
-              return frame;
+              return BuildPlaybackVisualFrame(
+                  audio_engine_, analyzer_, spectrum_peaks_l, spectrum_peaks_r);
             },
             // Build the playlist view model (tracks/current/selection).
             [&] {
@@ -176,8 +214,7 @@ int AppController::Run(const std::string& input_path) {
             &ui_session_state);
       } catch (const std::exception& ex) {
         audio_engine_.Stop();
-        std::cerr << "Warning: skip track due to error: " << ex.what()
-                  << std::endl;
+        std::cerr << "Warning: skip track due to error: " << ex.what() << '\n';
         current_index += 1;
         continue;
       }
@@ -209,7 +246,7 @@ int AppController::Run(const std::string& input_path) {
 
     return 0;
   } catch (const std::exception& ex) {
-    std::cerr << "Error: " << ex.what() << std::endl;
+    std::cerr << "Error: " << ex.what() << '\n';
     return 1;
   }
 }

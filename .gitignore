@@ -1,5 +1,6 @@
 # Build directory
 build/
+build-*/
 
 # CMake cache
 CMakeCache.txt
@@ -11,6 +12,3 @@ cmake_install.cmake
 
 # Compile database (local LSP artifact)
 compile_commands.json
-
-# xmake local cache
-.xmake/

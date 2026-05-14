@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(
   VocalPlayer
-  VERSION 0.2.1
+  VERSION 0.3.0
   LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -57,7 +57,8 @@ add_library(
   src/audio/decoder.cpp
   src/audio/metadata.cpp
   src/analysis/spectrum_analyzer.cpp
-  src/ui/tui_renderer.cpp)
+  src/ui/tui_renderer.cpp
+  src/ui/visual_update_pipeline.cpp)
 
 target_include_directories(
   vocalplayer_core
@@ -126,4 +127,15 @@ if(VOCALPLAYER_BUILD_TESTS)
   target_include_directories(test_theme PRIVATE ${PROJECT_SOURCE_DIR}/src)
   target_link_libraries(test_theme PRIVATE ftxui::screen)
   add_test(NAME theme_test COMMAND test_theme)
+
+  add_executable(
+    test_coalescing_redraw_gate
+    tests/test_coalescing_redraw_gate.cpp)
+  target_include_directories(
+    test_coalescing_redraw_gate
+    PRIVATE
+      ${PROJECT_SOURCE_DIR}/src)
+  add_test(
+    NAME coalescing_redraw_gate_test
+    COMMAND test_coalescing_redraw_gate)
 endif()

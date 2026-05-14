@@ -50,14 +50,21 @@ std::string FormatTime(double total_seconds) {
   return oss.str();
 }
 
-// Render normalized spectrum bars and peak-hold markers.
+/**
+ * @brief Render spectrum bars with peak-hold markers inside a centered canvas.
+ *
+ * @param bars Normalized bar amplitudes in [0, 1].
+ * @param peaks Peak-hold markers aligned with bars.
+ * @param theme Active color theme.
+ * @return FTXUI element centered horizontally in the parent container.
+ */
 Element RenderSpectrum(const std::vector<float>& bars,
                        const std::vector<float>& peaks, const Theme& theme) {
   if (bars.empty()) {
-    return text("(no spectrum data)");
+    return hcenter(text("(no spectrum data)"));
   }
   const int canvas_width = static_cast<int>(bars.size() * 2);
-  return canvas(
+  return hcenter(canvas(
       canvas_width, kSpectrumCanvasHeight,
       [bars, peaks, theme, canvas_width](Canvas& c) {
         const int baseline = kSpectrumCanvasHeight - 1;
@@ -89,16 +96,22 @@ Element RenderSpectrum(const std::vector<float>& bars,
             }
           }
         }
-      });
+      }));
 }
 
-// Render waveform points as a connected canvas line graph.
+/**
+ * @brief Render waveform polyline inside a centered canvas.
+ *
+ * @param wave Normalized waveform samples in [0, 1].
+ * @param theme Active color theme.
+ * @return FTXUI element centered horizontally in the parent container.
+ */
 Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
   if (wave.empty()) {
-    return text("(no waveform data)");
+    return hcenter(text("(no waveform data)"));
   }
   const int canvas_width = static_cast<int>(wave.size());
-  return canvas(
+  return hcenter(canvas(
       canvas_width, kWaveformCanvasHeight,
       [wave, theme, canvas_width](Canvas& c) {
         const int max_y = kWaveformCanvasHeight - 1;
@@ -121,7 +134,7 @@ Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
         if (canvas_width > 0) {
           c.DrawPointLine(0, max_y, canvas_width - 1, max_y, Color::GrayDark);
         }
-      });
+      }));
 }
 
 /**

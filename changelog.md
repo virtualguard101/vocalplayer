@@ -11,12 +11,10 @@
   `CoalescingRedrawGate` 合并唤醒，使用 `Post(Closure)` + `RequestAnimationFrame()`
   替代高频 `PostEvent(Event::Custom)`，减轻与 FTXUI 内置定时任务共享队列时的积压，
   改善锁屏/解锁后可视化卡顿与时间显示迟滞。
-- TUI refresh: `VisualUpdatePipeline` publishes frames from a worker thread and
-  coalesces redraw wakeups (`Post` + `RequestAnimationFrame`) instead of
-  per-tick `Event::Custom`, reducing FTXUI task-queue backlog after screen lock.
 
 ### Changed
 
+- TUI：频谱与波形 canvas 在各自 `window` 内水平居中（`hcenter`），避免宽面板下贴左留白。
 - 立体声可视化：`AudioEngine::GetRecentChannelWindow` 按声道提取分析窗；
   `ChannelVisuals` + `VisualFrame::left`/`right` 承载左右独立频谱/波形/仪表；
   单声道曲目复制声道 0 到两侧。`GetRecentMonoWindow` 已移除。

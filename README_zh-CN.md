@@ -6,7 +6,9 @@
 
 基于C++的创意型CLI音乐播放器，在终端中实现实时节奏可视化。
 
-> Demo：[assets/vocalplayer.webm](assets/vocalplayer.webm)
+<img src="assets/demo1.png" alt="vocalplayer demo default theme" width="32%">
+<img src="assets/demo2.png" alt="vocalplayer demo miku theme" width="32%">
+<img src="assets/demo3.png" alt="vocalplayer demo teto theme" width="32%">
 
 </div>
 

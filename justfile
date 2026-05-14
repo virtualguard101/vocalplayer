@@ -1,20 +1,22 @@
 alias qc := quick-check
 alias cw := cross-windows
 
-build:
-    cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    cmake --build build -j
+quick-check: build-debug
+    ctest --test-dir build/debug --output-on-failure -R "(playlist_test|keybindings_test)"
 
-quick-check:
-    cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    cmake --build build -j --target test_playlist test_keybindings
-    ctest --test-dir build --output-on-failure -R "(playlist_test|keybindings_test)"
-
-bootstrap:
+bootstrap type="debug":
     vcpkg install
-    cmake --preset vcpkg
-    ln -sf build/compile_commands.json compile_commands.json
+    cmake --preset {{ type }}
+    ln -sf build/{{ type }}/compile_commands.json compile_commands.json
     pre-commit install
+
+build-debug: (bootstrap "debug")
+    cmake --preset debug
+    cmake --build build/debug -j
+
+build-release: (bootstrap "release")
+    cmake --preset release
+    cmake --build build/release -j
 
 format:
     rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i 

@@ -60,12 +60,44 @@ jobs:
           if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
             BASE_SHA="$(git rev-list --max-parents=0 HEAD)"
           fi
-          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.cpp' '*.cc' '*.cxx' | tr '\n' ' ')"
-          echo "files=$changed_files" >> "$GITHUB_OUTPUT"
-          if [ -z "$changed_files" ]; then
+          mapfile -t changed_raw < <(
+            git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.cpp' '*.cc' '*.cxx'
+          )
+          if [ "${#changed_raw[@]}" -eq 0 ]; then
+            echo "files=" >> "$GITHUB_OUTPUT"
             echo "No changed C++ source files detected."
+            exit 0
+          fi
+          compile_db="build/debug/compile_commands.json"
+          tidy_files="$(
+            python3 - "${compile_db}" "${changed_raw[@]}" <<'PY'
+          import json
+          import os
+          import sys
+
+          compile_db = sys.argv[1]
+          changed = sys.argv[2:]
+          with open(compile_db, encoding="utf-8") as handle:
+              compiled = {os.path.normpath(entry["file"]) for entry in json.load(handle)}
+
+          selected = []
+          for path in changed:
+              abs_path = os.path.normpath(os.path.join(os.getcwd(), path))
+              if abs_path in compiled:
+                  selected.append(path)
+              else:
+                  print(
+                      f"Skipping {path} (not in {compile_db} for this CI build)",
+                      file=sys.stderr,
+                  )
+          print(" ".join(selected))
+          PY
+          )"
+          echo "files=$tidy_files" >> "$GITHUB_OUTPUT"
+          if [ -z "$tidy_files" ]; then
+            echo "No changed files are compiled in build/debug; clang-tidy skipped."
           else
-            echo "Changed files: $changed_files"
+            echo "clang-tidy files: $tidy_files"
           fi
 
       - name: Run clang-tidy on changed files

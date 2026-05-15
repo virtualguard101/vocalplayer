@@ -18,7 +18,7 @@ void PrepareConsoleEnvironment() {
   setlocale(LC_ALL, ".UTF-8");
   try {
     std::locale::global(std::locale(".UTF-8"));
-  } catch (...) {
+  } catch (...) {  // NOLINT(bugprone-empty-catch)
     // Keep process running even if a UTF-8 locale is not installed.
   }
 }

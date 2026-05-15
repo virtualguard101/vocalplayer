@@ -1,0 +1,76 @@
+# Shared steps: host packages, clone vcpkg at repo baseline, bootstrap, manifest install.
+# Must match vcpkg-configuration.json default-registry baseline.
+name: VocalPlayer vcpkg setup
+description: Install host build deps, pin vcpkg to baseline, bootstrap, and vcpkg install (manifest).
+
+inputs:
+  vcpkg-commit:
+    description: Git SHA of microsoft/vcpkg (same as vcpkg-configuration.json baseline).
+    required: true
+  triplet:
+    description: vcpkg triplet (e.g. x64-linux, arm64-osx, x64-windows).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: MSVC developer environment (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Install host tools (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y ninja-build pkg-config nasm
+
+    - name: Install host tools (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        brew install ninja pkg-config nasm
+
+    - name: Install host tools (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        choco install ninja nasm -y
+
+    - name: Clone and bootstrap vcpkg
+      shell: bash
+      env:
+        VCPKG_COMMIT: ${{ inputs.vcpkg-commit }}
+      run: |
+        set -euo pipefail
+        ROOT="${GITHUB_WORKSPACE}/vcpkg"
+        echo "VCPKG_ROOT=${ROOT}" >> "${GITHUB_ENV}"
+        echo "VCPKG_DEFAULT_TRIPLET=${{ inputs.triplet }}" >> "${GITHUB_ENV}"
+        rm -rf "${ROOT}"
+        git clone https://github.com/microsoft/vcpkg.git "${ROOT}"
+        cd "${ROOT}"
+        git checkout "${VCPKG_COMMIT}"
+        if [ "${RUNNER_OS}" = "Windows" ]; then
+          cmd.exe /c bootstrap-vcpkg.bat -disableMetrics
+        else
+          ./bootstrap-vcpkg.sh -disableMetrics
+        fi
+        echo "${ROOT}" >> "${GITHUB_PATH}"
+
+    - name: vcpkg install (manifest)
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${GITHUB_WORKSPACE}"
+        if [ -f "${VCPKG_ROOT}/vcpkg.exe" ]; then
+          VCPKG_BIN="${VCPKG_ROOT}/vcpkg.exe"
+        else
+          VCPKG_BIN="${VCPKG_ROOT}/vcpkg"
+        fi
+        "${VCPKG_BIN}" install --triplet "${{ inputs.triplet }}"

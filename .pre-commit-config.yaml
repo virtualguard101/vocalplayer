@@ -3,12 +3,12 @@ repos:
     hooks:
       - id: clang-format-staged
         name: clang-format staged C/C++ files
-        entry: bash scripts/git_hooks/run_clang_format_staged.sh
+        entry: just format
         language: system
         pass_filenames: true
         types_or: [c, c++]
       - id: quick-tests
         name: run quick tests
-        entry: bash scripts/git_hooks/run_quick_tests.sh
+        entry: just quick-check
         language: system
         pass_filenames: false

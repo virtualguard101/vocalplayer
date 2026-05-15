@@ -3,6 +3,19 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [Unreleased]
+
+### DevEx
+
+- GitHub Actions CI：通过 `extractions/setup-just` 安装 `just`，并安装 `pre-commit`
+  以满足 `justfile` 中 `bootstrap` 的 `pre-commit install`；主流程使用 `just test`、
+  `clang-tidy` 任务使用 `just build-debug`，与本地 Just 入口一致。
+- GitHub Actions：CI / Release 与仓库一致采用 vcpkg manifest + CMake Presets
+  （`cmake --preset debug|release`，`ctest` 指向 `build/debug` / `build/release`），
+  抽取 `.github/actions/vocalplayer-vcpkg-setup`；Release 中 macOS 产物标签改为
+  `macos-arm64`（与 `macos-latest` 托管 Runner 架构一致）。
+
+
 ## [0.3.0] - 2026-05-14
 
 ### Fixed

@@ -1,7 +1,8 @@
 alias qc := quick-check
-alias cw := cross-windows
+alias bd := build-debug
+alias br := build-release
 
-quick-check: build-debug
+quick-check: build-release
     ctest --test-dir build/debug --output-on-failure -R "(playlist_test|keybindings_test)"
 
 bootstrap type="debug":
@@ -21,12 +22,9 @@ build-release: (bootstrap "release")
 format:
     rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i 
 
-test:
-    ctest --test-dir build --output-on-failure
-
-cross-windows *ARGS:
-    scripts/build-windows.sh {{ARGS}}
+test: build-debug
+    ctest --test-dir build/debug --output-on-failure
 
 clean:
-    rm -rf build build-win
+    rm -rf build
     rm -f compile_commands.json

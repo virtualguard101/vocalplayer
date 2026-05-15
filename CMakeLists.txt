@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(
-  VocalPlayer
+  vocalplayer
   VERSION 0.3.0
   LANGUAGES C CXX)
 

@@ -23,7 +23,7 @@ namespace {
 constexpr uint32_t kAnalysisWindowSize = 2048;
 constexpr uint32_t kWaveformPointCount = 96;
 constexpr uint32_t kBandEnergyCount = 3;
-constexpr float kPeakDecayPerFrame = 0.035f;
+constexpr float kPeakDecayPerFrame = 0.035F;
 
 /**
  * @brief Run spectrum/waveform analysis for one channel window.
@@ -43,10 +43,10 @@ void FillChannelVisuals(SpectrumAnalyzer& analyzer, ChannelVisuals& out,
                         uint32_t band_energy_count, float peak_decay) {
   out.spectrum_bars = analyzer.ComputeBars(window);
   if (spectrum_peaks.size() != out.spectrum_bars.size()) {
-    spectrum_peaks.assign(out.spectrum_bars.size(), 0.0f);
+    spectrum_peaks.assign(out.spectrum_bars.size(), 0.0F);
   }
   for (size_t i = 0; i < out.spectrum_bars.size(); ++i) {
-    const float decayed_peak = std::max(0.0f, spectrum_peaks[i] - peak_decay);
+    const float decayed_peak = std::max(0.0F, spectrum_peaks[i] - peak_decay);
     spectrum_peaks[i] = std::max(out.spectrum_bars[i], decayed_peak);
   }
   out.spectrum_peak_bars = spectrum_peaks;

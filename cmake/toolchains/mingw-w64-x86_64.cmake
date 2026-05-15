@@ -1,6 +1,15 @@
 # MinGW-w64 cross toolchain (Linux host -> Windows x86_64 target).
 #
-# Usage:
+# Prefer the vcpkg-aligned flow (manifest deps, same as CI / `just bootstrap`):
+#   see `scripts/build-windows.sh` or CMake preset `mingw-cross`, which use
+#   `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake` + triplet `x64-mingw-static`
+#   and `mingw-w64-vcpkg-chainload.cmake` for compiler/pkg-config pinning.
+#
+# This file remains for ad-hoc CMake without vcpkg (no third-party packages from
+# vcpkg); `find_path(miniaudio)` and `find_package(ftxui)` will not resolve unless
+# you supply those deps yourself.
+#
+# Usage (legacy, no vcpkg):
 #   cmake -S . -B build-win -G Ninja \
 #     -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/mingw-w64-x86_64.cmake \
 #     -DCMAKE_BUILD_TYPE=Release

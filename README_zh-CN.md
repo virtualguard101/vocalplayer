@@ -101,6 +101,30 @@ just bd # build debug
 just br # build release
 ```
 
+### 交叉编译（Linux → Windows，MinGW）
+
+在 Linux 上使用与日常构建相同的 **vcpkg manifest**，目标 triplet 为社区
+**`x64-mingw-static`**，并通过 **`mingw-w64-vcpkg-chainload.cmake`** 固定
+`x86_64-w64-mingw32-*` 编译器前缀、将 **`CMAKE_SYSTEM_NAME` 设为 `Windows`**，
+以及固定 MinGW 的 `pkg-config` 搜索路径（避免混入宿主 Linux 的 TagLib 头文件）。
+
+前置条件：已 bootstrap 的 vcpkg（设置 **`VCPKG_ROOT`**，基线尽量与
+`vcpkg-configuration.json` 一致）、`cmake`、推荐 `ninja`、MinGW-w64 工具链；若希望
+`ctest` 在构建后运行测试，请安装 **Wine**。
+
+**`x64-mingw-static`** 的 manifest 依赖安装在 **`<构建目录>/vcpkg_installed/`**
+（默认 **`build-win/vcpkg_installed/`**），仓库根下的 **`vcpkg_installed/x64-linux`**
+仍供 `just bootstrap` / `debug` / `release` 使用。交叉预设默认关闭 TagLib 探测
+（**`VOCALPLAYER_FIND_TAGLIB=OFF`**），元数据走文件名回退；若日后通过 vcpkg 提供
+MinGW 版 TagLib，可自行改为 `ON`。
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+just cw
+# 等价：./scripts/build-windows.sh
+# 或：cmake --preset mingw-cross && cmake --build build-win -j
+```
+
 ### 贡献
 
 贡献流程相关内容参见[`contributing_zh-CN.md`](contributing_zh-CN.md)（[English](contributing.md)）。

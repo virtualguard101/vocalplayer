@@ -29,6 +29,19 @@
 		{
 			"name": "vcpkg",
 			"inherits": "debug"
+		},
+		{
+			"name": "mingw-cross",
+			"displayName": "Cross MinGW (vcpkg x64-mingw-static, Linux host)",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build-win",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/mingw-w64-vcpkg-chainload.cmake",
+				"VCPKG_INSTALLED_DIR": "${sourceDir}/build-win/vcpkg_installed",
+				"VOCALPLAYER_FIND_TAGLIB": "OFF"
+			}
 		}
 	]
 }

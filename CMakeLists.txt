@@ -11,6 +11,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(VOCALPLAYER_BUILD_TESTS "Build VocalPlayer tests." ON)
+option(VOCALPLAYER_FIND_TAGLIB
+  "Search for TagLib (disable for MinGW cross-builds to avoid host Linux includes)."
+  ON)
 
 find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h REQUIRED)
 add_library(miniaudio INTERFACE)
@@ -19,14 +22,16 @@ target_include_directories(miniaudio INTERFACE ${MINIAUDIO_INCLUDE_DIR})
 find_package(kissfft CONFIG REQUIRED COMPONENTS float)
 find_package(ftxui CONFIG REQUIRED)
 
-find_package(TagLib CONFIG QUIET)
+if(VOCALPLAYER_FIND_TAGLIB)
+  find_package(TagLib CONFIG QUIET)
 
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND AND NOT TagLib_FOUND)
-  pkg_check_modules(TAGLIB QUIET IMPORTED_TARGET taglib)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND AND NOT TagLib_FOUND)
+    pkg_check_modules(TAGLIB QUIET IMPORTED_TARGET taglib)
+  endif()
 endif()
 
-if(WIN32)
+if(WIN32 OR MINGW)
   set(VOCALPLAYER_PLATFORM_CONSOLE_SRC src/platform/console_windows.cpp)
   set(VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC
       src/platform/miniaudio_decoder_open_windows.cpp)

@@ -102,6 +102,32 @@ CMake automatically fetches these third-party libraries:
 just build-debug
 ```
 
+### Cross build (Linux → Windows, MinGW)
+
+From a Linux host, use the same **vcpkg manifest** as local debug/release builds,
+with community triplet **`x64-mingw-static`** and a small **chainload** toolchain
+that pins the `x86_64-w64-mingw32-*` compiler prefix, sets **`CMAKE_SYSTEM_NAME`
+to `Windows`**, and pins MinGW `pkg-config` paths.
+
+Prerequisites: `VCPKG_ROOT` pointing at a bootstrapped vcpkg clone (match
+`vcpkg-configuration.json` baseline when possible), `cmake`, `ninja` (recommended),
+MinGW-w64 (`gcc-mingw-w64-x86-64` / `g++-mingw-w64-x86-64` on Debian-style distros),
+and optional **Wine** if you want `ctest` to run the PE test binaries.
+
+Manifest packages for **`x64-mingw-static`** go under **`<build-dir>/vcpkg_installed/`**
+(default **`build-win/vcpkg_installed/`**), leaving **`vcpkg_installed/x64-linux`**
+at the repo root for `just bootstrap` / `debug` / `release` presets. TagLib lookup
+is **disabled** in this preset (`VOCALPLAYER_FIND_TAGLIB=OFF`) so host Linux TagLib
+headers are never mixed into the MinGW compile; metadata uses filename fallback
+unless you add TagLib for MinGW via vcpkg and re-enable the option.
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+just cw
+# Equivalent: ./scripts/build-windows.sh
+# Or: cmake --preset mingw-cross && cmake --build build-win -j
+```
+
 ### Contributing
 
 Contributor-oriented workflows are documented in [`contributing.md`](contributing.md) ([简体中文](contributing_zh-CN.md)).

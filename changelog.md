@@ -17,6 +17,13 @@
 - pre-commit：`clang-format-staged` 改为直接调用 `clang-format -i` 并传入暂存文件，
   不再使用 `just format`（`just` 会把首个路径误当成 recipe 名）；本地整仓格式化仍用
   `just format`。
+- Linux → Windows MinGW 交叉编译：`scripts/build-windows.sh` / `just cw` 与 CI 一致使用
+  **vcpkg manifest** + triplet **`x64-mingw-static`** +
+  `cmake/toolchains/mingw-w64-vcpkg-chainload.cmake`（含 **`CMAKE_SYSTEM_NAME=Windows`**
+  以便选择 `src/platform/*_windows.cpp`）；**`VCPKG_INSTALLED_DIR`** 指向
+  **`build-win/vcpkg_installed/`**，与仓库根 **`vcpkg_installed/x64-linux`** 并存；
+  默认 **`VOCALPLAYER_FIND_TAGLIB=OFF`** 防止宿主 TagLib 混入 MinGW 编译。新增 CMake
+  preset **`mingw-cross`**；`just clean` 同时删除 `build-win/`。
 - GitHub Actions CI：通过 `extractions/setup-just` 安装 `just`，并安装 `pre-commit`
   以满足 `justfile` 中 `bootstrap` 的 `pre-commit install`；主流程使用 `just test`、
   `clang-tidy` 任务使用 `just build-debug`，与本地 Just 入口一致。

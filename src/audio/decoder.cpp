@@ -29,7 +29,7 @@ std::string BuildMiniaudioError(const std::string& action, ma_result result) {
 }  // namespace
 
 // Decode file to interleaved PCM float samples.
-DecodedTrack Decoder::DecodeFile(const std::string& path) const {
+DecodedTrack Decoder::DecodeFile(const std::string& path) {
   // Initialize decoder output as float PCM by miniaudio API; use source-native
   // channels/rate.
   ma_decoder_config config =
@@ -78,7 +78,7 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
   } else {
     // Unknown length: stream in fixed-size chunks until end-of-file.
     constexpr ma_uint64 kChunkFrames = 4096;
-    std::vector<float> chunk(kChunkFrames * decoded.channels, 0.0f);
+    std::vector<float> chunk(kChunkFrames * decoded.channels, 0.0F);
     while (true) {
       ma_uint64 read_frames = 0;
       result = ma_decoder_read_pcm_frames(&decoder, chunk.data(), kChunkFrames,
@@ -92,7 +92,8 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
         // No more decoded frames available.
         break;
       }
-      size_t copy_samples = static_cast<size_t>(read_frames * decoded.channels);
+      const auto copy_samples =
+          static_cast<std::ptrdiff_t>(read_frames * decoded.channels);
       decoded.interleaved_samples.insert(decoded.interleaved_samples.end(),
                                          chunk.begin(),
                                          chunk.begin() + copy_samples);

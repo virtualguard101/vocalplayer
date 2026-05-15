@@ -30,7 +30,7 @@ class Decoder {
    * @note Uses miniaudio decoder and supports fallback chunk reads when the
    * stream length is unknown.
    */
-  DecodedTrack DecodeFile(const std::string& path) const;
+  static DecodedTrack DecodeFile(const std::string& path);
 };
 
 }  // namespace vocalplayer

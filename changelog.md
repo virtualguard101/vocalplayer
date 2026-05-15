@@ -14,6 +14,9 @@
 
 ### DevEx
 
+- CI clang-tidy：仅对 `build/debug/compile_commands.json` 中存在的变更 `.cpp` 执行检查，
+  跳过当前平台未参与编译的源文件（例如 Linux CI 上的 `*_windows.cpp`），避免
+  `windows.h` 缺失导致误报；修复 `Decoder::DecodeFile` 等 clang-tidy 告警。
 - pre-commit：`clang-format-staged` 改为直接调用 `clang-format -i` 并传入暂存文件，
   不再使用 `just format`（`just` 会把首个路径误当成 recipe 名）；本地整仓格式化仍用
   `just format`。

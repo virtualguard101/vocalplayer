@@ -3,6 +3,36 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [Unreleased]
+
+### Changed
+
+- 将 Windows 控制台 UTF-8 初始化与 UTF-16 解码路径打开抽到 `src/platform/`，由
+  `vocalplayer::platform::PrepareConsoleEnvironment()` 与
+  `vocalplayer::platform::MaDecoderInitFromUtf8Path()` 提供稳定入口；CMake 按 `WIN32`
+  选择 `*_windows.cpp` 或 `*_posix.cpp` 实现，便于后续集中做平台兼容优化。
+
+### DevEx
+
+- pre-commit：`clang-format-staged` 改为直接调用 `clang-format -i` 并传入暂存文件，
+  不再使用 `just format`（`just` 会把首个路径误当成 recipe 名）；本地整仓格式化仍用
+  `just format`。
+- Linux → Windows MinGW 交叉编译：`scripts/build-windows.sh` / `just cw` 与 CI 一致使用
+  **vcpkg manifest** + triplet **`x64-mingw-static`** +
+  `cmake/toolchains/mingw-w64-vcpkg-chainload.cmake`（含 **`CMAKE_SYSTEM_NAME=Windows`**
+  以便选择 `src/platform/*_windows.cpp`）；**`VCPKG_INSTALLED_DIR`** 指向
+  **`build-win/vcpkg_installed/`**，与仓库根 **`vcpkg_installed/x64-linux`** 并存；
+  默认 **`VOCALPLAYER_FIND_TAGLIB=OFF`** 防止宿主 TagLib 混入 MinGW 编译。新增 CMake
+  preset **`mingw-cross`**；`just clean` 同时删除 `build-win/`。
+- GitHub Actions CI：通过 `extractions/setup-just` 安装 `just`，并安装 `pre-commit`
+  以满足 `justfile` 中 `bootstrap` 的 `pre-commit install`；主流程使用 `just test`、
+  `clang-tidy` 任务使用 `just build-debug`，与本地 Just 入口一致。
+- GitHub Actions：CI / Release 与仓库一致采用 vcpkg manifest + CMake Presets
+  （`cmake --preset debug|release`，`ctest` 指向 `build/debug` / `build/release`），
+  抽取 `.github/actions/vocalplayer-vcpkg-setup`；Release 中 macOS 产物标签改为
+  `macos-arm64`（与 `macos-latest` 托管 Runner 架构一致）。
+
+
 ## [0.3.0] - 2026-05-14
 
 ### Fixed

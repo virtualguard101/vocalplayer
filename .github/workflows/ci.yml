@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+# Pin with vcpkg-configuration.json default-registry baseline.
+env:
+  VCPKG_COMMIT: 8defa4b8bc4c35071c678e87a0e140dd433489bb
+
 jobs:
   clang-tidy:
     runs-on: ubuntu-latest
@@ -16,13 +20,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-tidy pkg-config
+      - uses: lukka/get-cmake@latest
 
-      - name: Configure build
-        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pre-commit (for just bootstrap)
+        run: pip install pre-commit
+
+      - uses: extractions/setup-just@v2
+
+      - name: Install clang-tidy
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy
+
+      - name: Setup vcpkg (manifest)
+        uses: ./.github/actions/vocalplayer-vcpkg-setup
+        with:
+          vcpkg-commit: ${{ env.VCPKG_COMMIT }}
+          triplet: x64-linux
+
+      - name: Configure and build (Justfile)
+        run: just build-debug
 
       - name: Select changed C++ source files
         id: changed
@@ -52,7 +74,7 @@ jobs:
           set -euo pipefail
           for file in ${{ steps.changed.outputs.files }}; do
             echo "Running clang-tidy on $file"
-            clang-tidy "$file" -p build --config-file=.clang-tidy
+            clang-tidy "$file" -p build/debug --config-file=.clang-tidy
           done
 
   build-and-test:
@@ -61,11 +83,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure build
-        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - uses: lukka/get-cmake@latest
 
-      - name: Build
-        run: cmake --build build -j
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+      - name: Install pre-commit (for just bootstrap)
+        run: pip install pre-commit
+
+      - uses: extractions/setup-just@v2
+
+      - name: Setup vcpkg (manifest)
+        uses: ./.github/actions/vocalplayer-vcpkg-setup
+        with:
+          vcpkg-commit: ${{ env.VCPKG_COMMIT }}
+          triplet: x64-linux
+
+      - name: Build and test (Justfile)
+        run: just test

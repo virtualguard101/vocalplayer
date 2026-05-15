@@ -65,12 +65,7 @@ built on top of this interface.
 If you see many diagnostics like "header not found" in C++ files, clangd is
 usually missing the compile database (`compile_commands.json`).
 
-```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-ln -sf build/compile_commands.json compile_commands.json
-```
-
-You can also use [Just](https://github.com/casey/just):
+Recommended to use [Just](https://github.com/casey/just) for quick setup:
 
 ```bash
 just bootstrap
@@ -81,6 +76,7 @@ Then reload the IDE window so clangd can re-index.
 ### Dependencies
 
 - CMake >= 3.20
+- vcpkg (for managing third-party libraries)
 - C++20 compiler (`clang++` or `g++`)
 - Optional: TagLib development package (for richer metadata)
 
@@ -103,109 +99,34 @@ CMake automatically fetches these third-party libraries:
 ### Build
 
 ```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build build -j
+just build-debug
 ```
 
-or:
+### Cross build (Linux → Windows, MinGW)
+
+From a Linux host, use the same **vcpkg manifest** as local debug/release builds,
+with community triplet **`x64-mingw-static`** and a small **chainload** toolchain
+that pins the `x86_64-w64-mingw32-*` compiler prefix, sets **`CMAKE_SYSTEM_NAME`
+to `Windows`**, and pins MinGW `pkg-config` paths.
+
+Prerequisites: `VCPKG_ROOT` pointing at a bootstrapped vcpkg clone (match
+`vcpkg-configuration.json` baseline when possible), `cmake`, `ninja` (recommended),
+MinGW-w64 (`gcc-mingw-w64-x86-64` / `g++-mingw-w64-x86-64` on Debian-style distros),
+and optional **Wine** if you want `ctest` to run the PE test binaries.
+
+Manifest packages for **`x64-mingw-static`** go under **`<build-dir>/vcpkg_installed/`**
+(default **`build-win/vcpkg_installed/`**), leaving **`vcpkg_installed/x64-linux`**
+at the repo root for `just bootstrap` / `debug` / `release` presets. TagLib lookup
+is **disabled** in this preset (`VOCALPLAYER_FIND_TAGLIB=OFF`) so host Linux TagLib
+headers are never mixed into the MinGW compile; metadata uses filename fallback
+unless you add TagLib for MinGW via vcpkg and re-enable the option.
 
 ```bash
-just build
+export VCPKG_ROOT=/path/to/vcpkg
+just cw
+# Equivalent: ./scripts/build-windows.sh
+# Or: cmake --preset mingw-cross && cmake --build build-win -j
 ```
-
-### Cross Build (Linux → Windows)
-
-For quick local validation that the Windows build still configures and
-compiles, a MinGW-w64 cross toolchain and a one-shot script are provided.
-
-Prerequisites by distribution (the `wine` packages are optional and only
-needed to run the produced `.exe` and ctest transparently on the Linux host):
-
-- Arch / Manjaro / CachyOS (`pacman`):
-
-  ```bash
-  sudo pacman -S --needed mingw-w64-gcc cmake ninja
-  sudo pacman -S --needed wine            # optional
-  ```
-
-- Debian / Ubuntu / Linux Mint (`apt`):
-
-  ```bash
-  sudo apt update
-  sudo apt install -y mingw-w64 cmake ninja-build
-  sudo apt install -y wine64              # optional (or: wine)
-  ```
-
-- Fedora / RHEL / Rocky / Alma (`dnf`):
-
-  ```bash
-  sudo dnf install -y mingw64-gcc mingw64-gcc-c++ \
-                      mingw64-winpthreads-static cmake ninja-build
-  sudo dnf install -y wine                # optional
-  ```
-
-- openSUSE Tumbleweed / Leap (`zypper`):
-
-  ```bash
-  sudo zypper install -y mingw64-cross-gcc-c++ cmake ninja
-  sudo zypper install -y wine             # optional
-  ```
-
-- Alpine (`apk`, requires `community` repo):
-
-  ```bash
-  sudo apk add mingw-w64-gcc cmake samurai
-  sudo apk add wine                       # optional
-  ```
-
-- NixOS / nix-shell (ad-hoc, no system install):
-
-  ```bash
-  nix-shell -p pkgsCross.mingwW64.buildPackages.gcc \
-              cmake ninja wine
-  ```
-
-- Gentoo: use `crossdev` to build the MinGW-w64 toolchain, then install
-  `dev-build/cmake`, `dev-build/ninja`, and optionally `app-emulation/wine-vanilla`:
-
-  ```bash
-  sudo emerge -av sys-devel/crossdev
-  sudo crossdev --target x86_64-w64-mingw32
-  sudo emerge -av dev-build/cmake dev-build/ninja
-  sudo emerge -av app-emulation/wine-vanilla   # optional
-  ```
-
-The script auto-detects whichever toolchain is present as long as it exposes
-the standard `x86_64-w64-mingw32-gcc` / `-g++` names; otherwise override with
-`-DVOCALPLAYER_MINGW_PREFIX=<your-prefix>` when invoking CMake.
-
-One-click cross build (uses `build-win/` so the native `build/` is untouched):
-
-```bash
-scripts/build-windows.sh                 # configure + build + ctest (if Wine present)
-scripts/build-windows.sh -c -j 8         # clean rebuild with 8 parallel jobs
-scripts/build-windows.sh --no-tests      # build only, skip ctest
-scripts/build-windows.sh -r ~/Music      # build, then launch vocalplayer.exe via Wine
-```
-
-Or via Just:
-
-```bash
-just cross-windows                       # default Release build into build-win/
-just cross-windows -- --clean            # forward flags to the script
-```
-
-Notes:
-
-- The toolchain at `cmake/toolchains/mingw-w64-x86_64.cmake` statically links
-  the MinGW C/C++ runtimes, so the resulting `build-win/vocalplayer.exe` is a
-  single self-contained binary.
-- TagLib is not part of the default MinGW sysroot, so the cross build runs in
-  the filename-fallback metadata mode. The configure log prints
-  `TagLib metadata support: DISABLED (artist/title fallback mode)` to confirm.
-- TUI rendering inside `wine`/`wineconsole` is acceptable for smoke checks but
-  not a substitute for a real Windows terminal; final visual verification
-  should still happen on Windows.
 
 ### Contributing
 

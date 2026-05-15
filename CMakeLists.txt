@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(
-  VocalPlayer
+  vocalplayer
   VERSION 0.3.0
   LANGUAGES C CXX)
 
@@ -11,42 +11,34 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(VOCALPLAYER_BUILD_TESTS "Build VocalPlayer tests." ON)
+option(VOCALPLAYER_FIND_TAGLIB
+  "Search for TagLib (disable for MinGW cross-builds to avoid host Linux includes)."
+  ON)
 
-include(FetchContent)
+find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h REQUIRED)
+add_library(miniaudio INTERFACE)
+target_include_directories(miniaudio INTERFACE ${MINIAUDIO_INCLUDE_DIR})
 
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(KISSFFT_TEST OFF CACHE BOOL "" FORCE)
-set(KISSFFT_TOOLS OFF CACHE BOOL "" FORCE)
+find_package(kissfft CONFIG REQUIRED COMPONENTS float)
+find_package(ftxui CONFIG REQUIRED)
 
-FetchContent_Declare(
-  miniaudio
-  GIT_REPOSITORY https://github.com/mackron/miniaudio.git
-  GIT_TAG 0.11.23)
-FetchContent_MakeAvailable(miniaudio)
+if(VOCALPLAYER_FIND_TAGLIB)
+  find_package(TagLib CONFIG QUIET)
 
-FetchContent_Declare(
-  kissfft
-  GIT_REPOSITORY https://github.com/mborgerding/kissfft.git
-  GIT_TAG 131.1.0)
-FetchContent_MakeAvailable(kissfft)
+  find_package(PkgConfig QUIET)
+  if(PkgConfig_FOUND AND NOT TagLib_FOUND)
+    pkg_check_modules(TAGLIB QUIET IMPORTED_TARGET taglib)
+  endif()
+endif()
 
-FetchContent_Declare(
-  ftxui
-  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
-  GIT_TAG v5.0.0)
-FetchContent_MakeAvailable(ftxui)
-
-add_library(
-  kissfft_lib
-  STATIC
-  ${kissfft_SOURCE_DIR}/kiss_fft.c)
-target_include_directories(kissfft_lib PUBLIC ${kissfft_SOURCE_DIR})
-
-find_package(TagLib CONFIG QUIET)
-
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND AND NOT TagLib_FOUND)
-  pkg_check_modules(TAGLIB QUIET IMPORTED_TARGET taglib)
+if(WIN32 OR MINGW)
+  set(VOCALPLAYER_PLATFORM_CONSOLE_SRC src/platform/console_windows.cpp)
+  set(VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC
+      src/platform/miniaudio_decoder_open_windows.cpp)
+else()
+  set(VOCALPLAYER_PLATFORM_CONSOLE_SRC src/platform/console_posix.cpp)
+  set(VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC
+      src/platform/miniaudio_decoder_open_posix.cpp)
 endif()
 
 add_library(
@@ -58,19 +50,20 @@ add_library(
   src/audio/metadata.cpp
   src/analysis/spectrum_analyzer.cpp
   src/ui/tui_renderer.cpp
-  src/ui/visual_update_pipeline.cpp)
+  src/ui/visual_update_pipeline.cpp
+  ${VOCALPLAYER_PLATFORM_CONSOLE_SRC}
+  ${VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC})
 
 target_include_directories(
   vocalplayer_core
   PUBLIC
-    ${PROJECT_SOURCE_DIR}/src
-    ${miniaudio_SOURCE_DIR}
-    ${kissfft_SOURCE_DIR})
+    ${PROJECT_SOURCE_DIR}/src)
 
 target_link_libraries(
   vocalplayer_core
   PUBLIC
-    kissfft_lib
+    kissfft::kissfft
+    miniaudio
     ftxui::screen
     ftxui::dom
     ftxui::component)
@@ -110,9 +103,8 @@ if(VOCALPLAYER_BUILD_TESTS)
   target_include_directories(
     test_spectrum_analyzer
     PRIVATE
-      ${PROJECT_SOURCE_DIR}/src
-      ${kissfft_SOURCE_DIR})
-  target_link_libraries(test_spectrum_analyzer PRIVATE kissfft_lib)
+      ${PROJECT_SOURCE_DIR}/src)
+  target_link_libraries(test_spectrum_analyzer PRIVATE kissfft::kissfft)
   add_test(NAME spectrum_analyzer_test COMMAND test_spectrum_analyzer)
 
   add_executable(test_playlist tests/test_playlist.cpp src/app/playlist.cpp)

@@ -131,7 +131,8 @@ flowchart TB
 ## 组件职责说明
 
 - `main.cpp`
-  - 解析命令行参数，并将控制权交给 `AppController::Run()`。
+  - 解析命令行参数，调用 `vocalplayer::platform::PrepareConsoleEnvironment()`，
+    并将控制权交给 `AppController::Run()`。
 - `AppController`
   - 维护会话状态机。
   - 协调解码、播放、分析与 UI 意图处理。
@@ -140,6 +141,8 @@ flowchart TB
 - `Decoder`
   - 输出 `DecodedTrack`（交错 float PCM）。
   - 支持已知长度和分块回退解码。
+  - 通过 `vocalplayer::platform::MaDecoderInitFromUtf8Path()` 打开输入文件，使
+    Windows 可使用 Unicode 安全的 miniaudio 入口，避免在解码逻辑中散落 `#ifdef`。
 - `MetadataReader`
   - 基于路径与可选 TagLib 元数据构建 `TrackInfo`。
 - `AudioEngine`
@@ -158,6 +161,19 @@ flowchart TB
   - 当单帧分析耗时超过阈值时增加退让睡眠，减轻 CPU 积压。
 - `CoalescingRedrawGate`
   - 保证在未 flush 前最多只排队一次重绘唤醒（供 `VisualUpdatePipeline` 使用）。
+
+## 平台边界
+
+与操作系统相关的钩子集中在 `src/platform/`：
+
+- `vocalplayer::platform::PrepareConsoleEnvironment()` 在 `main.cpp` 中、于
+  `AppController::Run()` 之前调用（Windows 上配置 UTF-8 控制台；POSIX 当前为占位
+  空实现）。
+- `vocalplayer::platform::MaDecoderInitFromUtf8Path()` 由 `Decoder::DecodeFile()`
+  调用，以 UTF-8 路径文本打开 miniaudio 解码器（Windows 使用宽字符 API，POSIX 使用
+  窄路径 UTF-8）。
+
+CMake 根据 `WIN32` 选择编译 `*_windows.cpp` 或 `*_posix.cpp` 实现文件。
 
 ## 接口清单
 

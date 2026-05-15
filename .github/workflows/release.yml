@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+# Pin with vcpkg-configuration.json default-registry baseline.
+env:
+  VCPKG_COMMIT: 8defa4b8bc4c35071c678e87a0e140dd433489bb
+
 jobs:
   build:
     name: Build ${{ matrix.label }}
@@ -18,26 +22,37 @@ jobs:
         include:
           - os: ubuntu-latest
             label: linux-x86_64
+            triplet: x64-linux
             package_format: tar.gz
           - os: macos-latest
-            label: macos-x86_64
+            label: macos-arm64
+            triplet: arm64-osx
             package_format: tar.gz
           - os: windows-latest
             label: windows-x86_64
+            triplet: x64-windows
             package_format: zip
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure build
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - uses: lukka/get-cmake@latest
+
+      - name: Setup vcpkg (manifest)
+        uses: ./.github/actions/vocalplayer-vcpkg-setup
+        with:
+          vcpkg-commit: ${{ env.VCPKG_COMMIT }}
+          triplet: ${{ matrix.triplet }}
+
+      - name: Configure (CMake preset release)
+        run: cmake --preset release
 
       - name: Build
-        run: cmake --build build --config Release -j
+        run: cmake --build build/release --parallel 4
 
       - name: Run tests
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: ctest --test-dir build/release --output-on-failure
 
       - name: Package binary
         shell: bash
@@ -47,14 +62,12 @@ jobs:
           package_name="vocalplayer-${tag_name}-${{ matrix.label }}"
           stage_dir="dist/${package_name}"
           mkdir -p "$stage_dir"
-          if [ -f build/vocalplayer ]; then
-            cp build/vocalplayer "$stage_dir/"
-          elif [ -f build/vocalplayer.exe ]; then
-            cp build/vocalplayer.exe "$stage_dir/"
-          elif [ -f build/Release/vocalplayer.exe ]; then
-            cp build/Release/vocalplayer.exe "$stage_dir/"
+          if [ -f build/release/vocalplayer ]; then
+            cp build/release/vocalplayer "$stage_dir/"
+          elif [ -f build/release/vocalplayer.exe ]; then
+            cp build/release/vocalplayer.exe "$stage_dir/"
           else
-            echo "vocalplayer binary not found after build." >&2
+            echo "vocalplayer binary not found under build/release/." >&2
             exit 1
           fi
           if [ "${{ matrix.package_format }}" = "zip" ]; then

@@ -1,0 +1,8 @@
+{
+  "dependencies": [
+    "kissfft",
+    "ffmpeg",
+    "ftxui",
+    "miniaudio"
+  ]
+}

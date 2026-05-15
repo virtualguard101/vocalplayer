@@ -14,12 +14,9 @@
 #include <string>
 #include <vector>
 
-#if defined(_WIN32)
-#include <windows.h>
-#endif
-
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
+#include "platform/miniaudio_decoder_open.hpp"
 
 namespace vocalplayer {
 namespace {
@@ -28,27 +25,6 @@ namespace {
 std::string BuildMiniaudioError(const std::string& action, ma_result result) {
   return action + " failed: " + std::to_string(result);
 }
-
-#if defined(_WIN32)
-// Convert UTF-8 path text to UTF-16 for Windows-wide file APIs.
-std::wstring ConvertUtf8ToWide(const std::string& text) {
-  int wide_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-                                      text.c_str(), -1, nullptr, 0);
-  if (wide_size <= 0) {
-    throw std::runtime_error("Failed to convert UTF-8 path to UTF-16.");
-  }
-  std::wstring wide(static_cast<size_t>(wide_size), L'\0');
-  int converted = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-                                      text.c_str(), -1, wide.data(), wide_size);
-  if (converted <= 0) {
-    throw std::runtime_error("Failed to convert UTF-8 path to UTF-16.");
-  }
-  if (!wide.empty() && wide.back() == L'\0') {
-    wide.pop_back();
-  }
-  return wide;
-}
-#endif
 
 }  // namespace
 
@@ -61,16 +37,11 @@ DecodedTrack Decoder::DecodeFile(const std::string& path) const {
 
   ma_decoder decoder;
   // Open file and bind it to a miniaudio decoder instance.
-#if defined(_WIN32)
-  std::wstring wide_path = ConvertUtf8ToWide(path);
   ma_result result =
-      ma_decoder_init_file_w(wide_path.c_str(), &config, &decoder);
-#else
-  ma_result result = ma_decoder_init_file(path.c_str(), &config, &decoder);
-#endif
+      platform::MaDecoderInitFromUtf8Path(&decoder, &config, path.c_str());
   if (result != MA_SUCCESS) {
     throw std::runtime_error(
-        BuildMiniaudioError("ma_decoder_init_file", result));
+        BuildMiniaudioError("MaDecoderInitFromUtf8Path", result));
   }
 
   ma_uint64 frame_count = 0;

@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
-# Cross-build VocalPlayer for Windows (x86_64) from a Linux host.
+# Cross-build VocalPlayer for Windows (x86_64) from a Linux host using vcpkg
+# manifest + community triplet x64-mingw-static (same third-party flow as
+# `just bootstrap` / GitHub Actions, with MinGW instead of x64-linux).
 #
 # Usage:
 #   scripts/build-windows.sh [options]
+#
+# Prerequisites:
+#   - VCPKG_ROOT pointing at a vcpkg clone (baseline should match
+#     vcpkg-configuration.json for reproducible installs).
+#   - MinGW-w64 GCC with prefix x86_64-w64-mingw32- (e.g. gcc-mingw-w64-x86-64).
+#   - cmake, ninja (recommended).
+#
+# vcpkg packages for this triplet are installed under
+#   <build-dir>/vcpkg_installed/ (default build-dir: build-win)
+# so the repo-root vcpkg_installed/x64-linux used by `just bootstrap` is left
+# untouched. First CMake configure runs manifest install for x64-mingw-static.
 #
 # Options:
 #   -c, --clean        Remove the build directory before configuring.
@@ -19,7 +32,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-TOOLCHAIN_FILE="cmake/toolchains/mingw-w64-x86_64.cmake"
+VCPKG_TRIPLET="x64-mingw-static"
+CHAINLOAD_FILE="${PROJECT_ROOT}/cmake/toolchains/mingw-w64-vcpkg-chainload.cmake"
 MINGW_PREFIX="x86_64-w64-mingw32"
 
 BUILD_DIR="build-win"
@@ -44,7 +58,7 @@ warn()  { color "1;33" "[build-windows] $*"; }
 error() { color "1;31" "[build-windows] $*" >&2; }
 
 usage() {
-  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
@@ -81,10 +95,27 @@ cd "$PROJECT_ROOT"
 require_tool() {
   if ! command -v "$1" >/dev/null 2>&1; then
     error "Missing required tool: $1"
-    error "Install hint: pacman -S --needed mingw-w64-gcc cmake ninja"
     exit 1
   fi
 }
+
+if [[ -z "${VCPKG_ROOT:-}" ]]; then
+  error "VCPKG_ROOT is not set. Clone vcpkg, run ./bootstrap-vcpkg.sh, then:"
+  error "  export VCPKG_ROOT=/path/to/vcpkg"
+  error "Use the same baseline as vcpkg-configuration.json for reproducible builds."
+  exit 1
+fi
+
+VCPKG_TOOLCHAIN="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+if [[ ! -f "${VCPKG_TOOLCHAIN}" ]]; then
+  error "Invalid VCPKG_ROOT: missing ${VCPKG_TOOLCHAIN}"
+  exit 1
+fi
+
+if [[ ! -f "${CHAINLOAD_FILE}" ]]; then
+  error "Missing chainload toolchain: ${CHAINLOAD_FILE}"
+  exit 1
+fi
 
 require_tool cmake
 require_tool "${MINGW_PREFIX}-gcc"
@@ -113,20 +144,29 @@ fi
 
 mkdir -p "${BUILD_DIR}"
 
-info "Toolchain     : ${TOOLCHAIN_FILE}"
-info "Build dir     : ${BUILD_DIR}"
-info "Build type    : ${BUILD_TYPE}"
-info "Parallel jobs : ${JOBS}"
+info "VCPKG_ROOT     : ${VCPKG_ROOT}"
+info "Triplet        : ${VCPKG_TRIPLET}"
+info "Chainload      : ${CHAINLOAD_FILE}"
+info "Build dir      : ${BUILD_DIR}"
+info "Build type     : ${BUILD_TYPE}"
+info "Parallel jobs  : ${JOBS}"
 if [[ -n "$WINE_BIN" ]]; then
-  info "Test emulator : ${WINE_BIN}"
+  info "Test emulator  : ${WINE_BIN}"
 else
-  info "Test emulator : (none; tests will be skipped or executed natively)"
+  info "Test emulator  : (none; tests will be skipped or executed natively)"
 fi
+
+VCPKG_INSTALLED_DIR="${PROJECT_ROOT}/${BUILD_DIR}/vcpkg_installed"
+info "vcpkg installed dir: ${VCPKG_INSTALLED_DIR}"
 
 CONFIGURE_ARGS=(
   -S .
   -B "${BUILD_DIR}"
-  -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}"
+  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_TOOLCHAIN}"
+  -DVCPKG_TARGET_TRIPLET="${VCPKG_TRIPLET}"
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="${CHAINLOAD_FILE}"
+  -DVCPKG_INSTALLED_DIR="${VCPKG_INSTALLED_DIR}"
+  -DVOCALPLAYER_FIND_TAGLIB=OFF
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
 )
 CONFIGURE_ARGS+=( "${GENERATOR_ARGS[@]}" )
@@ -134,7 +174,7 @@ if [[ -n "$WINE_BIN" ]]; then
   CONFIGURE_ARGS+=( -DCMAKE_CROSSCOMPILING_EMULATOR="${WINE_BIN}" )
 fi
 
-info "Configuring..."
+info "Configuring (CMake)..."
 cmake "${CONFIGURE_ARGS[@]}"
 
 info "Building (jobs=${JOBS})..."

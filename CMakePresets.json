@@ -1,0 +1,47 @@
+{
+	"$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+	"version": 8,
+	"configurePresets": [
+		{
+			"name": "base",
+			"hidden": true,
+			"generator": "Ninja",
+			"cacheVariables": {
+				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+			}
+		},
+		{
+			"name": "debug",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/debug",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "release",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/release",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		},
+		{
+			"name": "vcpkg",
+			"inherits": "debug"
+		},
+		{
+			"name": "mingw-cross",
+			"displayName": "Cross MinGW (vcpkg x64-mingw-static, Linux host)",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build-win",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/mingw-w64-vcpkg-chainload.cmake",
+				"VCPKG_INSTALLED_DIR": "${sourceDir}/build-win/vcpkg_installed",
+				"VOCALPLAYER_FIND_TAGLIB": "OFF"
+			}
+		}
+	]
+}

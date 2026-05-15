@@ -5,8 +5,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 将 Windows 控制台 UTF-8 初始化与 UTF-16 解码路径打开抽到 `src/platform/`，由
+  `vocalplayer::platform::PrepareConsoleEnvironment()` 与
+  `vocalplayer::platform::MaDecoderInitFromUtf8Path()` 提供稳定入口；CMake 按 `WIN32`
+  选择 `*_windows.cpp` 或 `*_posix.cpp` 实现，便于后续集中做平台兼容优化。
+
 ### DevEx
 
+- pre-commit：`clang-format-staged` 改为直接调用 `clang-format -i` 并传入暂存文件，
+  不再使用 `just format`（`just` 会把首个路径误当成 recipe 名）；本地整仓格式化仍用
+  `just format`。
 - GitHub Actions CI：通过 `extractions/setup-just` 安装 `just`，并安装 `pre-commit`
   以满足 `justfile` 中 `bootstrap` 的 `pre-commit install`；主流程使用 `just test`、
   `clang-tidy` 任务使用 `just build-debug`，与本地 Just 入口一致。

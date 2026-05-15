@@ -20,7 +20,7 @@ build-release: (bootstrap "release")
     cmake --build build/release -j
 
 format:
-    rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i 
+    rg --files src -g '*.{h,hpp,cc,cpp,cxx}' -0 | xargs -0 clang-format -i
 
 test: build-debug
     ctest --test-dir build/debug --output-on-failure

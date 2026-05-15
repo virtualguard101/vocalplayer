@@ -44,7 +44,8 @@ flowchart LR
 ## Component Responsibilities
 
 - `main.cpp`
-  - Parses CLI argument and delegates control to `AppController::Run()`.
+  - Parses CLI argument, calls `vocalplayer::platform::PrepareConsoleEnvironment()`,
+    and delegates control to `AppController::Run()`.
 - `AppController`
   - Owns the session state machine.
   - Coordinates decode, playback, analysis, and UI intents.
@@ -53,6 +54,9 @@ flowchart LR
 - `Decoder`
   - Produces `DecodedTrack` (interleaved float PCM).
   - Handles known-length and chunked fallback reads.
+  - Opens input files via `vocalplayer::platform::MaDecoderInitFromUtf8Path()` so
+    Windows can use Unicode-safe miniaudio entry points without scattering `#ifdef`
+    in the decode logic.
 - `MetadataReader`
   - Creates `TrackInfo` from decoder metadata and optional TagLib tags.
 - `AudioEngine`
@@ -73,6 +77,18 @@ flowchart LR
 - `CoalescingRedrawGate`
   - Ensures at most one pending redraw callback is armed until the UI marks it
     flushed (used by `VisualUpdatePipeline`).
+
+## Platform boundary
+
+OS-specific hooks live under `src/platform/`:
+
+- `vocalplayer::platform::PrepareConsoleEnvironment()` is invoked from `main.cpp`
+  before `AppController::Run()` (UTF-8 console setup on Windows; POSIX no-op stub).
+- `vocalplayer::platform::MaDecoderInitFromUtf8Path()` is used by `Decoder::DecodeFile()`
+  to open miniaudio decoders from UTF-8 path text (wide-character APIs on Windows,
+  narrow UTF-8 path on POSIX).
+
+CMake selects `*_windows.cpp` vs `*_posix.cpp` sources based on `WIN32`.
 
 ## Interface Inventory
 

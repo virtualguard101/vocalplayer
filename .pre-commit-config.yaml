@@ -3,7 +3,8 @@ repos:
     hooks:
       - id: clang-format-staged
         name: clang-format staged C/C++ files
-        entry: just format
+        entry: clang-format
+        args: ["-i"]
         language: system
         pass_filenames: true
         types_or: [c, c++]

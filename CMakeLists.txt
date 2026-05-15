@@ -26,6 +26,16 @@ if(PkgConfig_FOUND AND NOT TagLib_FOUND)
   pkg_check_modules(TAGLIB QUIET IMPORTED_TARGET taglib)
 endif()
 
+if(WIN32)
+  set(VOCALPLAYER_PLATFORM_CONSOLE_SRC src/platform/console_windows.cpp)
+  set(VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC
+      src/platform/miniaudio_decoder_open_windows.cpp)
+else()
+  set(VOCALPLAYER_PLATFORM_CONSOLE_SRC src/platform/console_posix.cpp)
+  set(VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC
+      src/platform/miniaudio_decoder_open_posix.cpp)
+endif()
+
 add_library(
   vocalplayer_core
   src/app/app_controller.cpp
@@ -35,7 +45,9 @@ add_library(
   src/audio/metadata.cpp
   src/analysis/spectrum_analyzer.cpp
   src/ui/tui_renderer.cpp
-  src/ui/visual_update_pipeline.cpp)
+  src/ui/visual_update_pipeline.cpp
+  ${VOCALPLAYER_PLATFORM_CONSOLE_SRC}
+  ${VOCALPLAYER_PLATFORM_DECODER_OPEN_SRC})
 
 target_include_directories(
   vocalplayer_core

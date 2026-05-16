@@ -75,9 +75,9 @@ struct ChannelVisuals {
   /// Envelope waveform points in [0, 1].
   std::vector<float> waveform_envelope_points;
   /// Root-mean-square level in [0, 1].
-  float rms_level = 0.0f;
+  float rms_level = 0.0F;
   /// Peak level in [0, 1].
-  float peak_level = 0.0f;
+  float peak_level = 0.0F;
   /// Coarse band energies in [0, 1].
   std::vector<float> band_energies;
 };

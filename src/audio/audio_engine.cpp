@@ -139,7 +139,7 @@ PlaybackState AudioEngine::GetPlaybackState() const {
 // Extract a recent single-channel window for spectrum and waveform analysis.
 std::vector<float> AudioEngine::GetRecentChannelWindow(
     uint32_t channel_index, uint32_t window_size) const {
-  std::vector<float> channel_window(window_size, 0.0f);
+  std::vector<float> channel_window(window_size, 0.0F);
   if (decoded_track_.frame_count == 0 || decoded_track_.channels == 0 ||
       channel_index >= decoded_track_.channels) {
     return channel_window;

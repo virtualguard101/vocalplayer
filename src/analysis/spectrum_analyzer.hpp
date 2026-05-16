@@ -11,6 +11,7 @@
 #define VOCALPLAYER_SRC_ANALYSIS_SPECTRUM_ANALYZER_HPP_
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace vocalplayer {
@@ -20,9 +21,9 @@ namespace vocalplayer {
  */
 struct AudioLevels {
   /// Root-mean-square level in [0, 1].
-  float rms_level = 0.0f;
+  float rms_level = 0.0F;
   /// Peak absolute level in [0, 1].
-  float peak_level = 0.0f;
+  float peak_level = 0.0F;
 };
 
 /**
@@ -98,7 +99,7 @@ class SpectrumAnalyzer {
   std::vector<float> smoothed_bars_;
 
   struct Impl;
-  Impl* impl_;
+  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace vocalplayer

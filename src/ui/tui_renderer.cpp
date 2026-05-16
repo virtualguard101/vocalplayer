@@ -37,7 +37,7 @@ constexpr int kPlaylistVisibleRows = 10;
 constexpr int kSpectrumCanvasHeight = 32;
 constexpr int kWaveformCanvasHeight = 20;
 constexpr int kStereoMeterGaugeWidth = 14;
-constexpr float kSpectrumPeakThreshold = 0.03f;
+constexpr float kSpectrumPeakThreshold = 0.03F;
 
 // Format seconds as mm:ss for compact top status line.
 std::string FormatTime(double total_seconds) {
@@ -66,7 +66,7 @@ Element RenderSpectrum(const std::vector<float>& bars,
   const int canvas_width = static_cast<int>(bars.size() * 2);
   return hcenter(canvas(
       canvas_width, kSpectrumCanvasHeight,
-      [bars, peaks, theme, canvas_width](Canvas& c) {
+      [bars, peaks, theme, canvas_width](Canvas& canvas) {
         const int baseline = kSpectrumCanvasHeight - 1;
         for (size_t idx = 0; idx < bars.size(); ++idx) {
           const int bar_x = static_cast<int>(idx * 2);
@@ -76,11 +76,11 @@ Element RenderSpectrum(const std::vector<float>& bars,
           const int filled_height = static_cast<int>(
               value * static_cast<float>(kSpectrumCanvasHeight - 1));
           const int bar_top = baseline - filled_height;
-          c.DrawPointLine(bar_x, baseline, bar_x, bar_top,
-                          theme.spectrum_color);
+          canvas.DrawPointLine(bar_x, baseline, bar_x, bar_top,
+                               theme.spectrum_color);
           if (bar_x + 1 < canvas_width) {
-            c.DrawPointLine(bar_x + 1, baseline, bar_x + 1, bar_top,
-                            theme.spectrum_color);
+            canvas.DrawPointLine(bar_x + 1, baseline, bar_x + 1, bar_top,
+                                 theme.spectrum_color);
           }
 
           const bool should_draw_peak =
@@ -90,9 +90,9 @@ Element RenderSpectrum(const std::vector<float>& bars,
                 baseline -
                 static_cast<int>(peak_value *
                                  static_cast<float>(kSpectrumCanvasHeight - 1));
-            c.DrawPoint(bar_x, peak_y, true, theme.peak_color);
+            canvas.DrawPoint(bar_x, peak_y, true, theme.peak_color);
             if (bar_x + 1 < canvas_width) {
-              c.DrawPoint(bar_x + 1, peak_y, true, theme.peak_color);
+              canvas.DrawPoint(bar_x + 1, peak_y, true, theme.peak_color);
             }
           }
         }
@@ -113,7 +113,7 @@ Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
   const int canvas_width = static_cast<int>(wave.size());
   return hcenter(canvas(
       canvas_width, kWaveformCanvasHeight,
-      [wave, theme, canvas_width](Canvas& c) {
+      [wave, theme, canvas_width](Canvas& canvas) {
         const int max_y = kWaveformCanvasHeight - 1;
         int previous_x = 0;
         int previous_y = max_y;
@@ -123,16 +123,17 @@ Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
           const int current_y =
               static_cast<int>((1.0F - value) * static_cast<float>(max_y));
           if (idx == 0) {
-            c.DrawPoint(current_x, current_y, true, theme.waveform_color);
+            canvas.DrawPoint(current_x, current_y, true, theme.waveform_color);
           } else {
-            c.DrawPointLine(previous_x, previous_y, current_x, current_y,
-                            theme.waveform_color);
+            canvas.DrawPointLine(previous_x, previous_y, current_x, current_y,
+                                 theme.waveform_color);
           }
           previous_x = current_x;
           previous_y = current_y;
         }
         if (canvas_width > 0) {
-          c.DrawPointLine(0, max_y, canvas_width - 1, max_y, Color::GrayDark);
+          canvas.DrawPointLine(0, max_y, canvas_width - 1, max_y,
+                               Color::GrayDark);
         }
       }));
 }
@@ -147,33 +148,36 @@ Element RenderWaveform(const std::vector<float>& wave, const Theme& theme) {
  * @return FTXUI element tree for the meters panel.
  */
 Element RenderChannelMetersWindow(const std::string& title,
-                                  const ChannelVisuals& ch, const Theme& theme,
-                                  int gauge_width) {
+                                  const ChannelVisuals& channel_visuals,
+                                  const Theme& theme, int gauge_width) {
   return window(
       text(title) | color(theme.title_color),
       vbox({
           hbox({text("RMS  ") | color(theme.text_color),
-                gauge(ch.rms_level) | color(theme.meter_color) |
+                gauge(channel_visuals.rms_level) | color(theme.meter_color) |
                     size(WIDTH, EQUAL, gauge_width)}),
           hbox({text("Peak ") | color(theme.text_color),
-                gauge(ch.peak_level) | color(theme.warning_color) |
+                gauge(channel_visuals.peak_level) | color(theme.warning_color) |
                     size(WIDTH, EQUAL, gauge_width)}),
           separator(),
           text("Bands") | color(theme.accent_color),
-          hbox(
-              {text("Low  ") | color(theme.text_color),
-               gauge(ch.band_energies.size() > 0 ? ch.band_energies[0] : 0.0F) |
-                   color(theme.spectrum_color) |
-                   size(WIDTH, EQUAL, gauge_width)}),
-          hbox(
-              {text("Mid  ") | color(theme.text_color),
-               gauge(ch.band_energies.size() > 1 ? ch.band_energies[1] : 0.0F) |
-                   color(theme.accent_color) |
-                   size(WIDTH, EQUAL, gauge_width)}),
-          hbox(
-              {text("High ") | color(theme.text_color),
-               gauge(ch.band_energies.size() > 2 ? ch.band_energies[2] : 0.0F) |
-                   color(theme.peak_color) | size(WIDTH, EQUAL, gauge_width)}),
+          hbox({text("Low  ") | color(theme.text_color),
+                gauge(channel_visuals.band_energies.size() > 0
+                          ? channel_visuals.band_energies[0]
+                          : 0.0F) |
+                    color(theme.spectrum_color) |
+                    size(WIDTH, EQUAL, gauge_width)}),
+          hbox({text("Mid  ") | color(theme.text_color),
+                gauge(channel_visuals.band_energies.size() > 1
+                          ? channel_visuals.band_energies[1]
+                          : 0.0F) |
+                    color(theme.accent_color) |
+                    size(WIDTH, EQUAL, gauge_width)}),
+          hbox({text("High ") | color(theme.text_color),
+                gauge(channel_visuals.band_energies.size() > 2
+                          ? channel_visuals.band_energies[2]
+                          : 0.0F) |
+                    color(theme.peak_color) | size(WIDTH, EQUAL, gauge_width)}),
       }));
 }
 
@@ -453,7 +457,7 @@ void TuiRenderer::Run(
 
     const Theme& theme = GetBuiltinTheme(active_theme_id);
     const PlaybackState& state = latest_frame.playback_state;
-    float ratio = 0.0f;
+    float ratio = 0.0F;
     if (state.duration_sec > 0.0) {
       ratio = static_cast<float>(state.elapsed_sec / state.duration_sec);
     }
@@ -632,7 +636,7 @@ void TuiRenderer::Run(
 
 // Build textual progress bar from playback ratio.
 std::string TuiRenderer::BuildProgressBar(float ratio, int width) {
-  ratio = std::clamp(ratio, 0.0f, 1.0f);
+  ratio = std::clamp(ratio, 0.0F, 1.0F);
   int filled = static_cast<int>(ratio * static_cast<float>(width));
   return "[" + std::string(filled, '=') + std::string(width - filled, ' ') +
          "]";

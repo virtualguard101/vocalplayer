@@ -3,7 +3,7 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
-## [Unreleased]
+## [0.3.1] - 2026-05-17
 
 ### Changed
 
@@ -14,6 +14,8 @@
 
 ### DevEx
 
+- `SpectrumAnalyzer`：PIMPL `Impl` 由裸指针 `new`/`delete` 改为 `std::unique_ptr` +
+  `std::make_unique`，析构使用 `= default`，与项目内存管理规范一致。
 - CI clang-tidy：仅对 `build/debug/compile_commands.json` 中存在的变更 `.cpp` 执行检查，
   跳过当前平台未参与编译的源文件（例如 Linux CI 上的 `*_windows.cpp`），避免
   `windows.h` 缺失导致误报；修复 `Decoder::DecodeFile` 等 clang-tidy 告警。

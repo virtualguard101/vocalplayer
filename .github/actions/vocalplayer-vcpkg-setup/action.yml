@@ -43,7 +43,8 @@ runs:
         $ErrorActionPreference = 'Stop'
         choco install ninja nasm -y
 
-    - name: Clone and bootstrap vcpkg
+    - name: Clone and bootstrap vcpkg (Unix)
+      if: runner.os != 'Windows'
       shell: bash
       env:
         VCPKG_COMMIT: ${{ inputs.vcpkg-commit }}
@@ -56,21 +57,48 @@ runs:
         git clone https://github.com/microsoft/vcpkg.git "${ROOT}"
         cd "${ROOT}"
         git checkout "${VCPKG_COMMIT}"
-        if [ "${RUNNER_OS}" = "Windows" ]; then
-          cmd.exe /c bootstrap-vcpkg.bat -disableMetrics
-        else
-          ./bootstrap-vcpkg.sh -disableMetrics
-        fi
+        ./bootstrap-vcpkg.sh -disableMetrics
+        test -x "${ROOT}/vcpkg"
         echo "${ROOT}" >> "${GITHUB_PATH}"
 
-    - name: vcpkg install (manifest)
+    - name: Clone and bootstrap vcpkg (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        VCPKG_COMMIT: ${{ inputs.vcpkg-commit }}
+      run: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        $root = Join-Path $env:GITHUB_WORKSPACE 'vcpkg'
+        "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        "VCPKG_DEFAULT_TRIPLET=${{ inputs.triplet }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        if (Test-Path $root) { Remove-Item -Recurse -Force $root }
+        git clone https://github.com/microsoft/vcpkg.git $root
+        Push-Location $root
+        try {
+          git checkout $env:VCPKG_COMMIT
+          & "$root\bootstrap-vcpkg.bat" -disableMetrics
+          if (-not (Test-Path "$root\vcpkg.exe")) {
+            throw "bootstrap-vcpkg.bat did not produce vcpkg.exe under $root"
+          }
+        } finally {
+          Pop-Location
+        }
+        $root | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: vcpkg install (manifest, Unix)
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         set -euo pipefail
         cd "${GITHUB_WORKSPACE}"
-        if [ -f "${VCPKG_ROOT}/vcpkg.exe" ]; then
-          VCPKG_BIN="${VCPKG_ROOT}/vcpkg.exe"
-        else
-          VCPKG_BIN="${VCPKG_ROOT}/vcpkg"
-        fi
-        "${VCPKG_BIN}" install --triplet "${{ inputs.triplet }}"
+        "${VCPKG_ROOT}/vcpkg" install --triplet "${{ inputs.triplet }}"
+
+    - name: vcpkg install (manifest, Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        Set-Location $env:GITHUB_WORKSPACE
+        & "$env:VCPKG_ROOT\vcpkg.exe" install --triplet '${{ inputs.triplet }}'

@@ -3,6 +3,15 @@
 本文件用于记录 vocalplayer 的迭代历史，格式参考
 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [Unreleased]
+
+### DevEx
+
+- GitHub Actions：`vocalplayer-vcpkg-setup` 在 **Windows** 上改用 **PowerShell** 完成
+  clone/bootstrap/`vcpkg install`，并固定调用 **`vcpkg.exe`**，修复 Release 矩阵中
+  `windows-latest` 因 Git Bash 路径与 `[ -f vcpkg.exe ]` 误判而执行不存在的 `vcpkg`
+  导致失败（exit 127）的问题。
+
 ## [0.3.1] - 2026-05-17
 
 ### Changed
